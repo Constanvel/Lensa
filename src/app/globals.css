@@ -1,0 +1,588 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────
+   Lensa tokens.
+   --rule   divider · card border · toast border · row separator
+   --edge   boundary of anything interactive at rest
+   --focus  focus ring, always. never --accent.
+   --accent contested claim · error · destructive · unsourced citation
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --paper: #FAF8F3;
+  --raised: #F4F0E8;
+  --ink: #1A1815;
+  --ink2: #4A4640;
+  --muted: #6E675E;
+  --rule: #E2DCD0;
+  --edge: #8F8678;
+  --focus: #1A1815;
+  --accent: #8B2635;
+  --accent-h: #6E1E2A;
+  --moss: #3F5A3A;
+  --moss-t: #EDF1EA;
+  --ochre: #7A5B24;
+  --ochre-t: #F5EFE0;
+  --violet: #514A66;
+  --violet-t: #EEEBF2;
+
+  --measure: 680px;
+  --page: 1080px;
+  --control: 44px;
+  --radius: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #171512;
+    --raised: #221F1A;
+    --ink: #EDE7DC;
+    --ink2: #B5AEA2;
+    --muted: #857E73;
+    --rule: #322E27;
+    --edge: #6E675E;
+    --focus: #EDE7DC;
+    --accent: #C77380;
+    --accent-h: #DE909C;
+    --moss: #8FAF88;
+    --moss-t: #1E241C;
+    --ochre: #D4A857;
+    --ochre-t: #262017;
+    --violet: #A398C4;
+    --violet-t: #201E28;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #171512;
+  --raised: #221F1A;
+  --ink: #EDE7DC;
+  --ink2: #B5AEA2;
+  --muted: #857E73;
+  --rule: #322E27;
+  --edge: #6E675E;
+  --focus: #EDE7DC;
+  --accent: #C77380;
+  --accent-h: #DE909C;
+  --moss: #8FAF88;
+  --moss-t: #1E241C;
+  --ochre: #D4A857;
+  --ochre-t: #262017;
+  --violet: #A398C4;
+  --violet-t: #201E28;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-edge: var(--edge);
+  --color-accent: var(--accent);
+  --color-accent-h: var(--accent-h);
+  --color-moss: var(--moss);
+  --color-moss-t: var(--moss-t);
+  --color-ochre: var(--ochre);
+  --color-ochre-t: var(--ochre-t);
+  --color-violet: var(--violet);
+  --color-violet-t: var(--violet-t);
+
+  --font-serif: var(--font-literata), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 1024px;
+  --breakpoint-lg: 1280px;
+
+  /* No pill, no rounded-full. Every radius utility resolves to 2px or less. */
+  --radius-none: 0;
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 2px;
+  --radius-2xl: 2px;
+  --radius-3xl: 2px;
+  --radius-4xl: 2px;
+  --radius-full: 2px;
+}
+
+/* Depth is the hairline and the raised ground. Nothing else. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html {
+    background: var(--paper);
+    color-scheme: light dark;
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-variant-numeric: oldstyle-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: var(--ochre-t);
+    color: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  button {
+    font-family: var(--font-sans);
+    cursor: pointer;
+    color: inherit;
+  }
+
+  input,
+  textarea,
+  select {
+    font-family: var(--font-serif);
+    color: var(--ink);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    margin: 0;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--rule);
+  }
+  a:hover {
+    color: var(--accent-h);
+    border-bottom-color: var(--accent-h);
+  }
+  a.plain {
+    color: inherit;
+    border-bottom: 0;
+  }
+}
+
+@layer components {
+  /* ── type ─────────────────────────────────────────────── */
+  .meta {
+    font: 500 12px/1.4 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .meta-wrap { white-space: normal; }
+  .meta-strong { color: var(--ink2); }
+  .meta-accent { color: var(--accent); }
+  .meta-moss { color: var(--moss); }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+  }
+  .eyebrow {
+    font: 500 13px/1.3 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink2);
+    margin: 0;
+  }
+
+  .display { font: 400 49px/1.06 var(--font-serif); letter-spacing: -0.02em; }
+  .title   { font: 400 39px/1.14 var(--font-serif); letter-spacing: -0.015em; text-wrap: balance; }
+  .subhead { font: 400 31px/1.2 var(--font-serif); letter-spacing: -0.01em; }
+  .head-sm { font: 400 24px/1.3 var(--font-serif); }
+  .lead    { font: 400 19px/1.7 var(--font-serif); color: var(--ink2); hanging-punctuation: first last; text-wrap: pretty; }
+  .serif-md { font: 400 17px/1.6 var(--font-serif); color: var(--ink); }
+  .serif-sm { font: 400 15px/1.5 var(--font-serif); color: var(--ink); }
+  .note    { font: 400 14px/1.5 var(--font-sans); color: var(--muted); }
+  .note-lg { font: 400 15px/1.6 var(--font-sans); color: var(--muted); }
+
+  .body-p {
+    font: 400 19px/1.7 var(--font-serif);
+    color: var(--ink);
+    margin: 0;
+    hanging-punctuation: first last;
+    text-wrap: pretty;
+  }
+  /* A paragraph rewritten after a counterpoint. */
+  .body-p-revised { border-left: 2px solid var(--moss); padding-left: 18px; }
+
+  /* ── measure & page ───────────────────────────────────── */
+  /* Surplus viewport becomes margin, never a longer line. */
+  .measure { max-width: var(--measure); }
+  .page {
+    max-width: var(--page);
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+  @media (min-width: 1024px) {
+    .page { padding: 48px 48px 96px; }
+  }
+  .column {
+    max-width: 824px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  .column-narrow {
+    max-width: 380px;
+    margin: 0 auto;
+    padding: 48px 24px 64px;
+  }
+  @media (min-width: 1024px) {
+    .column-narrow { padding: 96px 0; }
+  }
+
+  /* ── controls ─────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--control);
+    padding: 0 18px;
+    border-radius: var(--radius);
+    border: 1px solid var(--edge);
+    background: none;
+    color: var(--ink);
+    font: 500 14px/1 var(--font-sans);
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--ink2); }
+
+  .btn-strong { border-color: var(--ink2); }
+  .btn-strong:hover { background: var(--raised); }
+
+  /* Oxblood fill: publishing, or a destructive confirmation. Never decorative. */
+  .btn-accent {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #FAF8F3;
+  }
+  .btn-accent:hover { background: var(--accent-h); border-color: var(--accent-h); }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    border-color: var(--rule);
+    background: none;
+    color: var(--muted);
+    cursor: default;
+  }
+
+  .btn-caps {
+    font: 500 12px/1 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* Text button: the hairline hugs the text; the 44px target comes from ::after,
+     so nothing on the page shifts to accommodate it. */
+  .text-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: 0;
+    padding: 2px 0;
+    font: 500 12px/1.4 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule);
+  }
+  .text-btn::after {
+    content: "";
+    position: absolute;
+    inset: -12px -8px;
+  }
+  .text-btn:hover { color: var(--ink); }
+  .text-btn-strong { color: var(--ink2); }
+
+  .text-btn-accent {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .text-btn-accent:hover { color: var(--accent-h); border-bottom-color: var(--accent-h); }
+
+  .text-btn-bare { border-bottom-color: transparent; }
+
+  /* Lens chip. Square; --edge carries the boundary, not --rule. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    height: var(--control);
+    padding: 0 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--edge);
+    background: none;
+    color: var(--ink2);
+    font: 400 14px/1 var(--font-sans);
+    white-space: nowrap;
+  }
+  .chip[aria-pressed="true"],
+  .chip[data-on="true"] {
+    background: var(--raised);
+    border-color: var(--ink2);
+    color: var(--ink);
+  }
+
+  /* Underline filter (feed lenses, ledger sort). */
+  .filter {
+    display: inline-flex;
+    align-items: center;
+    height: var(--control);
+    padding: 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    font: 500 12px/1.4 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .filter[data-on="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── fields ───────────────────────────────────────────── */
+  .field {
+    width: 100%;
+    height: var(--control);
+    padding: 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--edge);
+    border-radius: 0;
+    font: 400 17px/1.4 var(--font-serif);
+    color: var(--ink);
+    outline-offset: 4px;
+  }
+  textarea.field {
+    height: auto;
+    resize: none;
+    padding-bottom: 12px;
+    line-height: 1.7;
+  }
+  .field-lg { font: 400 19px/1.4 var(--font-serif); }
+  .field-title { height: 52px; font: 400 31px/1.25 var(--font-serif); letter-spacing: -0.01em; }
+  .field-ui { font: 400 17px/1.4 var(--font-sans); }
+  .field-num { width: 64px; text-align: right; font: 400 15px/1.2 var(--font-sans); }
+  .field::placeholder { color: var(--muted); }
+
+  /* Verdict rides the underline; one line of small caps says why. */
+  .field[data-verdict="good"] { border-bottom: 2px solid var(--moss); }
+  .field[data-verdict="bad"] { border-bottom: 2px solid var(--accent); }
+
+  .verdict {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: var(--control);
+    font: 500 12px/1.4 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .verdict[data-verdict="good"] { color: var(--moss); }
+  .verdict[data-verdict="bad"] { color: var(--accent); }
+
+  .checkbox {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+    border: 1px solid var(--edge);
+    border-radius: var(--radius);
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .checkbox[data-on="true"] { border-color: var(--ink); background: var(--ink); }
+
+  .label {
+    display: block;
+    font: 500 12px/1.4 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* ── claim badges ─────────────────────────────────────── */
+  /* Label, tint and border weight all differ. Colour never carries it alone. */
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font: 500 12px/1.4 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .badge-textual {
+    background: var(--moss-t);
+    color: var(--moss);
+    border-left: 3px solid var(--moss);
+  }
+  .badge-interpretive {
+    background: var(--ochre-t);
+    color: var(--ochre);
+    border-left: 2px solid var(--ochre);
+  }
+  .badge-speculative {
+    background: var(--violet-t);
+    color: var(--violet);
+    border-left: 2px dashed var(--violet);
+  }
+  /* An unsourced Textual claim reads as demoted, not as absent. */
+  .badge-demoted {
+    text-decoration: underline dashed;
+    text-underline-offset: 3px;
+  }
+
+  .cite-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: var(--control);
+    background: none;
+    border: 0;
+    padding: 0;
+    font: 500 12px/1.4 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--rule);
+    white-space: nowrap;
+  }
+  .cite-chip[data-unsourced="true"] {
+    color: var(--accent);
+    text-decoration-color: var(--accent);
+    text-decoration-style: dashed;
+  }
+
+  /* ── cards & rows ─────────────────────────────────────── */
+  .card {
+    border: 1px solid var(--rule);
+    border-radius: 0;
+    padding: 28px;
+    background: var(--paper);
+  }
+  .card-link:hover { border-color: var(--ink2); }
+
+  .row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--rule);
+    padding: 20px 0;
+  }
+  .row-last { border-bottom: 1px solid var(--rule); }
+  .row-hover:hover { background: var(--raised); }
+  /* A contested claim is the one thing loud enough to earn oxblood. */
+  .row-contested { border-left: 2px solid var(--accent); padding-left: 18px; }
+
+  /* Square. No circles anywhere, avatars included. */
+  .avatar {
+    flex: none;
+    border: 1px solid var(--rule);
+    border-radius: 0;
+    background: repeating-linear-gradient(135deg, var(--rule) 0 1px, transparent 1px 8px);
+  }
+
+  /* ── essay layout ─────────────────────────────────────── */
+  /* Under 1024 the margin badge becomes an inline label above the paragraph. */
+  .p-row {
+    display: block;
+    max-width: var(--measure);
+    margin: 0 auto 24px;
+    padding: 0 24px;
+  }
+  .p-row > .badge-cell {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 8px;
+  }
+  .p-row > .note-cell { display: none; }
+
+  @media (min-width: 1024px) {
+    .p-row {
+      display: grid;
+      grid-template-columns: 132px 32px minmax(0, var(--measure));
+      justify-content: center;
+      max-width: none;
+      padding: 0 24px;
+    }
+    .p-row > .badge-cell {
+      justify-content: flex-end;
+      align-items: flex-start;
+      padding-top: 7px;
+      margin-bottom: 0;
+    }
+    .p-row > .note-cell {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 6px;
+    }
+  }
+
+  .margin-note {
+    font: 400 14px/1.45 var(--font-serif);
+    font-style: italic;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  /* Blur is a filter, so the text is already laid out underneath and
+     revealing never moves the scroll. */
+  .gated { filter: blur(6px); user-select: none; }
+  .gate {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .gate > * { pointer-events: auto; }
+
+  /* ── loading is a static state ────────────────────────── */
+  /* Opacity drop plus a small caps label. No spinner, no shimmer. */
+  .loading {
+    opacity: 0.45;
+    font: 500 12px/1.4 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+}
+
+@layer utilities {
+  .rule-t { border-top: 1px solid var(--rule); }
+  .rule-b { border-bottom: 1px solid var(--rule); }
+  .accent-bar { border-left: 2px solid var(--accent); padding-left: 16px; }
+  .quiet-bar { border-left: 1px solid var(--rule); padding-left: 20px; }
+  .ink-bar { border-left: 2px solid var(--ink); padding-left: 20px; }
+}

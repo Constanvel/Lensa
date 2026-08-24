@@ -1,4 +1,4 @@
-import { SpoilerGate } from "./spoiler-gate";
+import { SpoilerBlock } from "./kit";
 import { BlockBadge } from "./ui";
 import type { Block } from "@/lib/types";
 
@@ -88,7 +88,7 @@ export function EssayBody({
               {block.margin_note && <span className="margin-note hidden md:block">{block.margin_note}</span>}
             </div>
             <div />
-            {gated ? <SpoilerGate covers={coversLabel(block, unitLabel)}>{paragraph}</SpoilerGate> : paragraph}
+            {gated ? <SpoilerBlock covers={coversLabel(block, unitLabel)}>{paragraph}</SpoilerBlock> : paragraph}
           </div>
         );
       })}

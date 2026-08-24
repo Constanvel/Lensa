@@ -165,6 +165,12 @@ export function countSentences(input: string): number {
   return (input.match(/[.!?](\s|$)/g) || []).length;
 }
 
+/** Word budget for the counter on a textarea. Whitespace alone is zero words. */
+export function countWords(input: string): number {
+  const trimmed = input.trim();
+  return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
 /** Roughly 220 words a minute, which is what the mockups assume. */
 export function readingMinutes(text: string): number {
   const words = text.trim().split(/\s+/).filter(Boolean).length;

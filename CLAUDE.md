@@ -80,6 +80,19 @@ drawer sits beside the measure rather than over it.
   (`effectiveClaimKind` in `src/lib/types.ts`).
 - The steelman gate is the one hard stop, and it applies only to counterpoints.
 
+## The component library
+
+`src/components/kit` holds the typed components. Build new UI from it rather than
+from raw class names, and add to it rather than around it. Every component takes
+a `className` and writes no colour of its own.
+
+Both invariants above are enforced by the class, not the component, so older
+markup that still applies `.text-btn` or `.field` directly is equally covered.
+`/design/states` renders the whole inventory in both themes; it ships with the
+app on purpose, because a states page kept in a separate tool stops matching the
+product. Hover, focus and active are rendered there through a `force` prop whose
+CSS rule also lists the real pseudo-class, so a specimen cannot drift.
+
 ## Architecture
 
 Server Components by default; a Client Component only where state is genuinely

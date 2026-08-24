@@ -1,32 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { ClaimBadge } from "@/components/kit";
 import { lensNames } from "@/lib/lenses";
-import {
-  CLAIM_LABEL,
-  SPOILER_LABEL,
-  effectiveClaimKind,
-  isUnsourced,
-  type Block,
-  type ClaimKind,
-  type Essay,
-} from "@/lib/types";
+import { SPOILER_LABEL, effectiveClaimKind, isUnsourced, type Block, type Essay } from "@/lib/types";
 
-const BADGE_CLASS: Record<ClaimKind, string> = {
-  textual: "badge badge-textual",
-  interpretive: "badge badge-interpretive",
-  speculative: "badge badge-speculative",
-};
-
-/**
- * Label, tint and border weight all differ, so the three kinds stay legible
- * without colour. A Textual claim with no citation is shown demoted.
- */
-export function ClaimBadge({ kind, demoted = false }: { kind: ClaimKind; demoted?: boolean }) {
-  return (
-    <span className={`${BADGE_CLASS[kind]}${demoted ? " badge-demoted" : ""}`}>{CLAIM_LABEL[kind]}</span>
-  );
-}
+export { ClaimBadge };
 
 export function BlockBadge({ block }: { block: Pick<Block, "claim_kind" | "citation"> }) {
   return <ClaimBadge kind={effectiveClaimKind(block)} demoted={isUnsourced(block)} />;

@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   countSentences,
+  countWords,
   effectiveClaimKind,
   isUnsourced,
   oneSentence,
@@ -43,6 +44,13 @@ test("counting sentences ignores mid-word punctuation", () => {
   assert.equal(countSentences("One. Two."), 2);
   assert.equal(countSentences("Ch. 93 is the load-bearing line."), 2);
   assert.equal(countSentences(""), 0);
+});
+
+test("an empty textarea counts zero words, not one", () => {
+  assert.equal(countWords(""), 0);
+  assert.equal(countWords("   \n  "), 0);
+  assert.equal(countWords("one"), 1);
+  assert.equal(countWords("  two   words  "), 2);
 });
 
 test("an unsourced Textual claim reads as Interpretive", () => {

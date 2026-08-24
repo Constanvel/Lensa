@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────
-   Lensa tokens.
+   Lensa tokens. Every hex in the product lives in this block and
+   the two theme blocks below it. Nothing downstream writes a colour.
+
    --rule   divider · card border · toast border · row separator
    --edge   boundary of anything interactive at rest
    --focus  focus ring, always. never --accent.
    --accent contested claim · error · destructive · unsourced citation
    ───────────────────────────────────────────────────────────── */
-:root {
+:root,
+[data-theme="light"] {
   --paper: #FAF8F3;
   --raised: #F4F0E8;
   --ink: #1A1815;
@@ -24,7 +27,9 @@
   --ochre-t: #F5EFE0;
   --violet: #514A66;
   --violet-t: #EEEBF2;
+}
 
+:root {
   --measure: 680px;
   --page: 1080px;
   --control: 44px;
@@ -52,7 +57,9 @@
   }
 }
 
-:root[data-theme="dark"] {
+/* Not scoped to :root — a nested [data-theme] container repaints its own
+   subtree, which is what lets /design/states show both themes at once. */
+[data-theme="dark"] {
   --paper: #171512;
   --raised: #221F1A;
   --ink: #EDE7DC;
@@ -124,6 +131,9 @@
   }
   :root[data-theme="light"] { color-scheme: light; }
   :root[data-theme="dark"] { color-scheme: dark; }
+  /* A nested theme container also repaints its native controls. */
+  [data-theme="light"]:not(:root) { color-scheme: light; }
+  [data-theme="dark"]:not(:root) { color-scheme: dark; }
 
   body {
     margin: 0;
@@ -139,7 +149,10 @@
     color: var(--ink);
   }
 
-  :focus-visible {
+  /* One focus treatment, everywhere. `data-force` renders the same
+     declaration statically so a specimen cannot drift from the real thing. */
+  :focus-visible,
+  [data-force="focus"] {
     outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
@@ -191,6 +204,7 @@
   .meta-strong { color: var(--ink2); }
   .meta-accent { color: var(--accent); }
   .meta-moss { color: var(--moss); }
+  .meta-ink { color: var(--ink); }
   .meta-row {
     display: flex;
     flex-wrap: wrap;
@@ -250,7 +264,8 @@
     .column-narrow { padding: 96px 0; }
   }
 
-  /* ── controls ─────────────────────────────────────────── */
+  /* ── buttons ──────────────────────────────────────────── */
+  /* Secondary: --edge carries the boundary. --rule would read as inert. */
   .btn {
     display: inline-flex;
     align-items: center;
@@ -264,19 +279,27 @@
     font: 500 14px/1 var(--font-sans);
     white-space: nowrap;
   }
-  .btn:hover { border-color: var(--ink2); }
+  .btn:hover,
+  .btn[data-force="hover"] { border-color: var(--ink2); }
+  .btn:active,
+  .btn[data-force="active"] { background: var(--raised); border-color: var(--ink2); }
 
   .btn-strong { border-color: var(--ink2); }
-  .btn-strong:hover { background: var(--raised); }
+  .btn-strong:hover,
+  .btn-strong[data-force="hover"] { background: var(--raised); }
 
-  /* Oxblood fill: publishing, or a destructive confirmation. Never decorative. */
+  /* Primary: oxblood fill. Publishing, or confirming something destructive. */
   .btn-accent {
     border-color: var(--accent);
     background: var(--accent);
-    color: #FAF8F3;
+    color: var(--paper);
   }
-  .btn-accent:hover { background: var(--accent-h); border-color: var(--accent-h); }
+  .btn-accent:hover,
+  .btn-accent[data-force="hover"] { background: var(--accent-h); border-color: var(--accent-h); }
+  .btn-accent:active,
+  .btn-accent[data-force="active"] { background: var(--accent-h); border-color: var(--accent-h); }
 
+  /* Disabled falls back to the hairline, which is how it reads as inert. */
   .btn:disabled,
   .btn[aria-disabled="true"] {
     border-color: var(--rule);
@@ -285,14 +308,23 @@
     cursor: default;
   }
 
+  /* Loading is a static state: opacity down, small caps label, no spinner. */
+  .btn[data-loading="true"] {
+    opacity: 0.55;
+    cursor: default;
+    font: 500 12px/1 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
   .btn-caps {
     font: 500 12px/1 var(--font-sans);
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
 
-  /* Text button: the hairline hugs the text; the 44px target comes from ::after,
-     so nothing on the page shifts to accommodate it. */
+  /* Text button: the hairline hugs the text; the 44px target comes from
+     ::after, so nothing on the page shifts to accommodate it. */
   .text-btn {
     position: relative;
     display: inline-flex;
@@ -312,18 +344,35 @@
     position: absolute;
     inset: -12px -8px;
   }
-  .text-btn:hover { color: var(--ink); }
+  .text-btn:hover,
+  .text-btn[data-force="hover"] { color: var(--ink); }
+  .text-btn:active,
+  .text-btn[data-force="active"] { color: var(--ink); border-bottom-color: var(--ink2); }
+  .text-btn:disabled,
+  .text-btn[aria-disabled="true"] {
+    color: var(--muted);
+    opacity: 0.5;
+    border-bottom-color: var(--rule);
+    cursor: default;
+  }
+  .text-btn[data-loading="true"] { opacity: 0.55; cursor: default; }
+
   .text-btn-strong { color: var(--ink2); }
 
+  /* The destructive text action. Oxblood text on paper, never a filled button. */
   .text-btn-accent {
     color: var(--accent);
     border-bottom-color: var(--accent);
   }
-  .text-btn-accent:hover { color: var(--accent-h); border-bottom-color: var(--accent-h); }
+  .text-btn-accent:hover,
+  .text-btn-accent[data-force="hover"] { color: var(--accent-h); border-bottom-color: var(--accent-h); }
+  .text-btn-accent:active,
+  .text-btn-accent[data-force="active"] { color: var(--accent-h); }
 
   .text-btn-bare { border-bottom-color: transparent; }
 
-  /* Lens chip. Square; --edge carries the boundary, not --rule. */
+  /* ── chips ────────────────────────────────────────────── */
+  /* Unselected uses --edge. --rule measures 1.3:1 on paper and fails here. */
   .chip {
     display: inline-flex;
     align-items: center;
@@ -336,12 +385,24 @@
     font: 400 14px/1 var(--font-sans);
     white-space: nowrap;
   }
+  .chip:hover,
+  .chip[data-force="hover"] { border-color: var(--ink2); color: var(--ink); }
+  .chip:active,
+  .chip[data-force="active"] { background: var(--raised); border-color: var(--ink2); }
   .chip[aria-pressed="true"],
   .chip[data-on="true"] {
     background: var(--raised);
     border-color: var(--ink2);
     color: var(--ink);
   }
+  .chip:disabled,
+  .chip[aria-disabled="true"] {
+    border-color: var(--rule);
+    color: var(--muted);
+    background: none;
+    cursor: default;
+  }
+  .chip[data-loading="true"] { opacity: 0.55; cursor: default; }
 
   /* Underline filter (feed lenses, ledger sort). */
   .filter {
@@ -384,10 +445,19 @@
   .field-ui { font: 400 17px/1.4 var(--font-sans); }
   .field-num { width: 64px; text-align: right; font: 400 15px/1.2 var(--font-sans); }
   .field::placeholder { color: var(--muted); }
+  .field:hover,
+  .field[data-force="hover"] { border-bottom-color: var(--ink2); }
+  .field:disabled,
+  .field[aria-disabled="true"] {
+    border-bottom-color: var(--rule);
+    color: var(--muted);
+    cursor: default;
+  }
+  .field[data-loading="true"] { opacity: 0.55; }
 
-  /* Verdict rides the underline; one line of small caps says why. */
-  .field[data-verdict="good"] { border-bottom: 2px solid var(--moss); }
-  .field[data-verdict="bad"] { border-bottom: 2px solid var(--accent); }
+  /* The verdict rides the underline; one line of small caps says why. */
+  .field[data-verdict="accepted"] { border-bottom: 2px solid var(--moss); }
+  .field[data-verdict="rejected"] { border-bottom: 2px solid var(--accent); }
 
   .verdict {
     display: flex;
@@ -399,9 +469,54 @@
     letter-spacing: 0.08em;
     color: var(--muted);
   }
-  .verdict[data-verdict="good"] { color: var(--moss); }
-  .verdict[data-verdict="bad"] { color: var(--accent); }
+  .verdict[data-verdict="accepted"] { color: var(--moss); }
+  .verdict[data-verdict="rejected"] { color: var(--accent); }
 
+  /* Native select. The chevron is a sibling span so no colour is inlined. */
+  .select {
+    width: 100%;
+    height: var(--control);
+    padding: 0 26px 0 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--edge);
+    border-radius: 0;
+    font: 400 17px/1.4 var(--font-serif);
+    color: var(--ink);
+    appearance: none;
+    outline-offset: 4px;
+  }
+  .select:hover,
+  .select[data-force="hover"] { border-bottom-color: var(--ink2); }
+  .select:disabled,
+  .select[aria-disabled="true"] {
+    border-bottom-color: var(--rule);
+    color: var(--muted);
+    cursor: default;
+  }
+  .select[data-verdict="accepted"] { border-bottom: 2px solid var(--moss); }
+  .select[data-verdict="rejected"] { border-bottom: 2px solid var(--accent); }
+
+  .search {
+    width: 100%;
+    height: var(--control);
+    padding: 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--edge);
+    border-radius: 0;
+    font: 400 15px/1.4 var(--font-sans);
+    color: var(--ink);
+    outline-offset: 4px;
+  }
+  .search::placeholder { color: var(--muted); }
+  .search:hover,
+  .search[data-force="hover"] { border-bottom-color: var(--ink2); }
+  .search:focus,
+  .search[data-force="focus"] { border-bottom-color: var(--ink2); }
+  .search:disabled { border-bottom-color: var(--rule); color: var(--muted); cursor: default; }
+
+  /* Unchecked uses --edge. Checked fills with ink. */
   .checkbox {
     flex: none;
     width: 16px;
@@ -414,7 +529,18 @@
     align-items: center;
     justify-content: center;
   }
+  .checkbox > svg { display: none; }
   .checkbox[data-on="true"] { border-color: var(--ink); background: var(--ink); }
+  .checkbox[data-on="true"] > svg { display: block; }
+
+  input[type="checkbox"]:checked + .checkbox { border-color: var(--ink); background: var(--ink); }
+  input[type="checkbox"]:checked + .checkbox > svg { display: block; }
+  input[type="checkbox"]:focus-visible + .checkbox {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  input[type="checkbox"]:disabled + .checkbox { border-color: var(--rule); background: none; }
+  input[type="checkbox"]:disabled ~ .check-label { color: var(--muted); }
 
   .label {
     display: block;
@@ -455,6 +581,7 @@
     text-decoration: underline dashed;
     text-underline-offset: 3px;
   }
+  .badge-selected { outline: 1px solid var(--ink2); outline-offset: 2px; }
 
   .cite-chip {
     display: inline-flex;
@@ -473,20 +600,38 @@
     text-decoration-color: var(--rule);
     white-space: nowrap;
   }
+  .cite-chip:hover,
+  .cite-chip[data-force="hover"] { color: var(--ink); text-decoration-color: var(--ink2); }
+  .cite-chip:active,
+  .cite-chip[data-force="active"] { color: var(--ink); }
   .cite-chip[data-unsourced="true"] {
     color: var(--accent);
     text-decoration-color: var(--accent);
     text-decoration-style: dashed;
   }
+  .cite-chip[data-unsourced="true"]:hover,
+  .cite-chip[data-unsourced="true"][data-force="hover"] {
+    color: var(--accent-h);
+    text-decoration-color: var(--accent-h);
+  }
+  .cite-chip:disabled,
+  .cite-chip[aria-disabled="true"] {
+    color: var(--muted);
+    opacity: 0.5;
+    text-decoration-color: var(--rule);
+    cursor: default;
+  }
+  .cite-chip[data-loading="true"] { opacity: 0.55; cursor: default; }
 
-  /* ── cards & rows ─────────────────────────────────────── */
+  /* ── cards, rows, dividers ────────────────────────────── */
   .card {
     border: 1px solid var(--rule);
     border-radius: 0;
     padding: 28px;
     background: var(--paper);
   }
-  .card-link:hover { border-color: var(--ink2); }
+  .card-link:hover,
+  .card-link[data-force="hover"] { border-color: var(--ink2); }
 
   .row {
     display: block;
@@ -498,17 +643,119 @@
     padding: 20px 0;
   }
   .row-last { border-bottom: 1px solid var(--rule); }
-  .row-hover:hover { background: var(--raised); }
+  .row-hover:hover,
+  .row-hover[data-force="hover"] { background: var(--raised); }
   /* A contested claim is the one thing loud enough to earn oxblood. */
   .row-contested { border-left: 2px solid var(--accent); padding-left: 18px; }
+
+  .divider {
+    height: 1px;
+    width: 100%;
+    border: 0;
+    margin: 0;
+    background: var(--rule);
+  }
+  .divider-vertical {
+    width: 1px;
+    height: auto;
+    align-self: stretch;
+    background: var(--rule);
+  }
 
   /* Square. No circles anywhere, avatars included. */
   .avatar {
     flex: none;
+    display: block;
     border: 1px solid var(--rule);
     border-radius: 0;
+    object-fit: cover;
     background: repeating-linear-gradient(135deg, var(--rule) 0 1px, transparent 1px 8px);
   }
+
+  /* ── checklist, lens picker, self audit ───────────────── */
+  .check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    width: 100%;
+    border: 0;
+    border-top: 1px solid var(--rule);
+    background: none;
+    padding: 16px 8px;
+    margin-left: -8px;
+    text-align: left;
+  }
+  .check-row:hover,
+  .check-row[data-force="hover"] { background: var(--raised); }
+  .check-label {
+    flex: 1 1 260px;
+    font: 400 15px/1.5 var(--font-sans);
+    color: var(--ink);
+  }
+
+  .lens-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    width: 100%;
+    border: 0;
+    border-top: 1px solid var(--rule);
+    background: none;
+    padding: 14px 8px;
+    margin-left: -8px;
+    text-align: left;
+  }
+  @media (min-width: 1024px) {
+    .lens-row {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr) 88px;
+      gap: 20px;
+      align-items: baseline;
+    }
+  }
+  .lens-row:hover,
+  .lens-row[data-force="hover"] { background: var(--raised); }
+  .lens-row[data-on="true"] { background: var(--raised); }
+  .lens-row[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+  .lens-row-name { font: 400 17px/1.4 var(--font-serif); color: var(--ink2); }
+  .lens-row[data-on="true"] .lens-row-name { color: var(--ink); }
+  .lens-row-def { font: 400 15px/1.55 var(--font-serif); color: var(--ink2); text-wrap: pretty; }
+
+  .audit-row {
+    display: grid;
+    grid-template-columns: 116px minmax(0, 1fr);
+    gap: 24px;
+    align-items: baseline;
+    border-top: 1px solid var(--rule);
+    padding: 12px 0;
+  }
+  .audit-text { font: 400 17px/1.5 var(--font-serif); color: var(--ink); }
+
+  /* ── pagination ───────────────────────────────────────── */
+  .pagination {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
+  }
+
+  /* ── toast ────────────────────────────────────────────── */
+  /* Border is --rule: a toast is a surface, not a control. */
+  .toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    max-width: 420px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--paper);
+    padding: 16px 18px;
+  }
+  .toast[data-tone="done"] { border-left: 2px solid var(--moss); }
+  .toast[data-tone="error"] { border-left: 2px solid var(--accent); }
+  .toast-body { flex: 1; font: 400 15px/1.5 var(--font-sans); color: var(--ink); }
 
   /* ── essay layout ─────────────────────────────────────── */
   /* Under 1024 the margin badge becomes an inline label above the paragraph. */
@@ -555,6 +802,7 @@
 
   /* Blur is a filter, so the text is already laid out underneath and
      revealing never moves the scroll. */
+  .spoiler { position: relative; }
   .gated { filter: blur(6px); user-select: none; }
   .gate {
     position: absolute;
@@ -577,6 +825,7 @@
     letter-spacing: 0.08em;
     color: var(--muted);
   }
+  .is-loading { opacity: 0.55; }
 }
 
 @layer utilities {

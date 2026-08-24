@@ -1,5 +1,3 @@
-@AGENTS.md
-
 # Lensa — permanent constraints
 
 These are not preferences. Breaking one stops the product being Lensa.

@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { EssayBody } from "@/components/essay-body";
-import { ThesisBar } from "@/components/thesis-bar";
+import { ReaderTopBar } from "@/components/reader-top-bar";
 import { essayMeta } from "@/components/ui";
+import { CLAIM_KINDS, effectiveClaimKind, type ClaimKind } from "@/lib/types";
 import {
   blocksForEssay,
   counterpointsFor,
@@ -43,10 +44,18 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
       })
     : "";
 
-  return (
-    <main className="pb-24">
-      <ThesisBar thesis={essay.thesis ?? ""} />
+  // Tallied by what is badged on the page, so a demoted Textual claim counts
+  // where the reader sees it.
+  const counts = Object.fromEntries(CLAIM_KINDS.map((kind) => [kind, 0])) as Record<ClaimKind, number>;
+  for (const block of blocks) {
+    if (block.kind === "paragraph") counts[effectiveClaimKind(block)] += 1;
+  }
 
+  return (
+    <>
+      <ReaderTopBar thesis={essay.thesis ?? ""} counts={counts} />
+
+      <main className="pb-24">
       <div className="mx-auto max-w-[824px] px-6 pt-10 pb-8 md:pt-16 md:pb-12">
         <div className="meta-row meta mb-6">
           <Link href={`/c/${essay.character.slug}`} className="text-btn text-btn-strong plain">
@@ -149,6 +158,7 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
           </Link>
         ))}
       </div>
-    </main>
+      </main>
+    </>
   );
 }

@@ -27,7 +27,7 @@ export function SteelmanField({ defaultValue }: { defaultValue: string }) {
         value={value}
         onChange={(event) => setValue(event.target.value)}
         className="field field-lg"
-        data-verdict={value.length === 0 ? undefined : ready ? "good" : "bad"}
+        data-verdict={value.length === 0 ? undefined : ready ? "accepted" : "rejected"}
       />
       <p className="note mt-4 mb-10 max-w-[560px]">
         Their strongest version, not their weakest. The author of the original essay is shown this summary and

@@ -21,7 +21,7 @@ export function CharacterForm({ initialName, works }: { initialName: string; wor
   // ponytail: name uniqueness is checked on submit, not per keystroke — one
   // round trip instead of a debounced lookup. Add live checking if the
   // duplicate rate justifies it.
-  const nameVerdict = name.trim().length < 2 ? "bad" : state.error ? "bad" : "good";
+  const nameVerdict = name.trim().length < 2 ? "rejected" : state.error ? "rejected" : "accepted";
   const nameMessage =
     name.trim().length < 2
       ? "A name is required"

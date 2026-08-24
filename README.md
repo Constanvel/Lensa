@@ -57,6 +57,39 @@ deskripsi karakter dua kalimat, dan demosi klaim Textual yang belum bersumber.
 | `/write` · `/write/[id]` | Pilih karakter; editor |
 | `/counterpoint/new/[essayId]` | Steelman gate, langkah satu |
 | `/me` · `/settings` | Draft, terbit, respons; akun dan posisi baca |
+| `/design/states` | Seluruh inventaris komponen, semua state, dua tema |
+
+## Component library
+
+`src/components/kit`. Setiap komponen bertipe, menerima `className`, dan tidak
+menulis satu warna pun — kelas yang dipakainya ada di `src/app/globals.css`,
+satu-satunya file yang boleh memuat hex.
+
+```
+Button (primary · secondary) · TextButton · DestructiveAction
+TextInput · CounterTextarea · Select · SearchField
+LensChip · ClaimBadge · CitationChip · SpoilerBlock
+Avatar · Divider · MetadataLabel · Pagination · Toast
+ChecklistItem · LensPickerRow · SelfAuditRow
+```
+
+State yang berlaku: default, hover, focus visible, active, disabled, loading.
+Field menambah **accepted** (underline moss 2px) dan **rejected** (underline
+oxblood 2px plus satu baris small caps yang menyebut alasannya).
+
+Hover, focus, dan active bisa dirender statis lewat prop `force`. Aturan CSS-nya
+menyebut pseudo-class dan `[data-force]` dalam satu rule yang sama, jadi spesimen
+di `/design/states` tidak bisa menyimpang dari komponen aslinya.
+
+Dua hal yang dijamin di level kelas, bukan di level komponen — jadi tetap berlaku
+untuk markup lama yang belum memakai kit:
+
+- Setiap text button dapat target 44px dari `.text-btn::after { inset: -12px -8px }`.
+- Setiap kontrol yang sedang diam — input, textarea, select, search field,
+  checkbox belum dicentang, chip belum dipilih, secondary button — memakai
+  `--edge`. `--rule` hanya untuk divider, border kartu dan toast, pemisah baris,
+  dan kontrol disabled.
+
 
 ## Constraint desain
 

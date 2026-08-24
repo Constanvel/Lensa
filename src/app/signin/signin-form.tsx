@@ -16,8 +16,8 @@ export function SignInForm({ mode, expired }: { mode: "signin" | "signup"; expir
   });
 
   const [email, setEmail] = useState(state.email);
-  const verdict = email.length === 0 ? "" : EMAIL.test(email) ? "good" : "bad";
-  const ok = verdict === "good";
+  const verdict = email.length === 0 ? "" : EMAIL.test(email) ? "accepted" : "rejected";
+  const ok = verdict === "accepted";
 
   const message =
     state.error ??
@@ -73,9 +73,9 @@ export function SignInForm({ mode, expired }: { mode: "signin" | "signup"; expir
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           className="field field-ui"
-          data-verdict={state.error ? "bad" : verdict || undefined}
+          data-verdict={state.error ? "rejected" : verdict || undefined}
         />
-        <div className="verdict" data-verdict={state.error ? "bad" : verdict || undefined}>
+        <div className="verdict" data-verdict={state.error ? "rejected" : verdict || undefined}>
           {message}
         </div>
         {/* Unfilled until the address parses. */}

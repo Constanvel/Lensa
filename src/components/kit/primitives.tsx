@@ -293,11 +293,14 @@ export function SearchField({
 export type LensChipProps = Omit<ComponentPropsWithoutRef<"button">, "className"> &
   StateProps & {
     selected?: boolean;
+    /** Renders a link instead of a button, for filters that live in the URL. */
+    href?: string;
   };
 
 /** Unselected border is --edge, the same token every resting control uses. */
 export function LensChip({
   selected = false,
+  href,
   className,
   force,
   loading = false,
@@ -305,10 +308,30 @@ export function LensChip({
   disabled,
   ...rest
 }: LensChipProps) {
+  const classes = cx("chip", className);
+
+  // A filter that lives in searchParams has to be a link, or it stops working
+  // without JavaScript. Same shape as TextButton.
+  if (href) {
+    const { type: _type, ...anchorProps } = rest;
+    return (
+      <Link
+        href={href}
+        className={cx(classes, "plain")}
+        aria-current={selected ? "true" : undefined}
+        data-on={selected ? "true" : undefined}
+        {...stateAttrs({ force, loading })}
+        {...(anchorProps as ComponentPropsWithoutRef<"a">)}
+      >
+        {children}
+      </Link>
+    );
+  }
+
   return (
     <button
       type="button"
-      className={cx("chip", className)}
+      className={classes}
       aria-pressed={selected}
       disabled={disabled || loading}
       {...stateAttrs({ force, loading })}

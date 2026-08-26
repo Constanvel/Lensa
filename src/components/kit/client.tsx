@@ -2,7 +2,7 @@
 
 import { useState, type ComponentPropsWithoutRef, type ReactNode } from "react";
 
-import { Button, MetadataLabel, TextButton, cx, type ForcedState, type Verdict } from "./primitives";
+import { MetadataLabel, TextButton, cx, type ForcedState, type Verdict } from "./primitives";
 import { countWords } from "@/lib/types";
 
 export type CounterTextareaProps = Omit<ComponentPropsWithoutRef<"textarea">, "className"> & {
@@ -83,24 +83,31 @@ export type SpoilerBlockProps = {
 
 /**
  * Blur is a filter, so the paragraph is already laid out underneath and
- * revealing never moves the scroll.
+ * revealing never moves the scroll. Nothing is covered: the range is stated
+ * legibly above the blur and the way out sits below it, so the reader decides
+ * with the cost in front of them.
  */
 export function SpoilerBlock({ covers, children, defaultRevealed = false, className }: SpoilerBlockProps) {
   const [revealed, setRevealed] = useState(defaultRevealed);
 
   return (
     <div className={cx("spoiler", className)}>
+      {/* The range and the control stay in flow whether or not the block is
+          revealed. Blurring the text costs no height, and neither may the
+          things around it: revealing must not move a single line. */}
+      <MetadataLabel className="spoiler-range">{covers}</MetadataLabel>
+
       <div className={revealed ? undefined : "gated"} aria-hidden={!revealed}>
         {children}
       </div>
-      {!revealed && (
-        <div className="gate">
-          <MetadataLabel>{covers}</MetadataLabel>
-          <Button caps onClick={() => setRevealed(true)} className="bg-[color:var(--raised)]">
-            Reveal this paragraph
-          </Button>
-        </div>
-      )}
+
+      <TextButton
+        className="spoiler-reveal"
+        aria-pressed={revealed}
+        onClick={() => setRevealed((open) => !open)}
+      >
+        {revealed ? "Hide this paragraph" : "Reveal this paragraph"}
+      </TextButton>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { EssayRow, Stat } from "@/components/ui";
-import { LENSES, isLens, lensName } from "@/lib/lenses";
+import { LensChip } from "@/components/kit";
+import { EmptyState, EssayRow, Stat } from "@/components/ui";
+import { LENSES, LENS_KEYS, isLens, lensName } from "@/lib/lenses";
 import { MEDIUM_LABEL } from "@/lib/types";
 import { createDraft } from "@/lib/actions";
 import { characterBySlug, characterStats, essaysForCharacter } from "@/lib/queries";
@@ -87,14 +88,14 @@ export default async function CharacterPage({
       </div>
 
       {stats.essayCount > 0 && (
-        <div className="flex flex-wrap gap-x-5 pt-8 pb-2">
-          <Link href={`/c/${slug}`} className="filter plain" data-on={!lens}>
+        <div className="flex flex-wrap items-center gap-2 pt-8 pb-4">
+          <LensChip href={`/c/${slug}`} selected={!lens}>
             All lenses
-          </Link>
-          {Object.entries(LENSES).map(([key, def]) => (
-            <Link key={key} href={`/c/${slug}?lens=${key}`} className="filter plain" data-on={lens === key}>
-              {def.name}
-            </Link>
+          </LensChip>
+          {LENS_KEYS.map((key) => (
+            <LensChip key={key} href={`/c/${slug}?lens=${key}`} selected={lens === key}>
+              {LENSES[key].name}
+            </LensChip>
           ))}
         </div>
       )}
@@ -114,6 +115,16 @@ export default async function CharacterPage({
           ))}
           <div className="rule-t" />
         </>
+      ) : lens ? (
+        // The character has essays, just none under this lens. Saying nobody
+        // has written on them would be false.
+        <div className="rule-t max-w-[600px] pt-14">
+          <EmptyState
+            headline={`No essays on ${character.name} under ${LENSES[lens].name} yet.`}
+            body="A lens is a method, not a category. The first essay to use one here sets the terms the rest argue with."
+            action={{ label: "Show every lens", href: `/c/${slug}` }}
+          />
+        </div>
       ) : (
         <div className="max-w-[600px] pt-14">
           <p className="head-sm m-0 mb-3 [text-wrap:pretty]">

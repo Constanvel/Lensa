@@ -431,6 +431,15 @@ export function Inventory() {
           <Spec state="Loading">
             <LensChip loading>Nietzschean</LensChip>
           </Spec>
+          {/* A filter that lives in the URL has to be a link to work without JS. */}
+          <Spec state="Link">
+            <LensChip href="/lenses">Nietzschean</LensChip>
+          </Spec>
+          <Spec state="Link selected">
+            <LensChip href="/lenses" selected>
+              Nietzschean
+            </LensChip>
+          </Spec>
         </Component>
 
         <Component name="Checklist item">

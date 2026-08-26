@@ -47,13 +47,18 @@ export default async function WorkPage({
       <div className="rule-t pt-8 pb-12">
         <div className="flex items-baseline gap-4 pb-4">
           <span className="meta">Characters</span>
+          <span className="meta">{roster.length}</span>
           <span className="ml-auto" />
-          <Link href={`/w/${slug}`} className="filter plain" data-on={sort === "essays"}>
-            By essays
-          </Link>
-          <Link href={`/w/${slug}?sort=az`} className="filter plain" data-on={sort === "az"}>
-            A to Z
-          </Link>
+          {roster.length > 1 && (
+            <>
+              <Link href={`/w/${slug}`} className="filter plain" data-on={sort === "essays"}>
+                By essays
+              </Link>
+              <Link href={`/w/${slug}?sort=az`} className="filter plain" data-on={sort === "az"}>
+                A to Z
+              </Link>
+            </>
+          )}
         </div>
 
         {roster.length === 0 ? (
@@ -63,7 +68,7 @@ export default async function WorkPage({
             action={{ label: "Add a character", href: "/characters/new" }}
           />
         ) : (
-          <div className="md:columns-2 md:gap-16">
+          <div className={roster.length >= 8 ? "md:columns-2 md:gap-16" : undefined}>
             {roster.map((entry) => (
               <Link
                 key={entry.id}

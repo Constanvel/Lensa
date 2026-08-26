@@ -760,7 +760,13 @@
   .toast-body { flex: 1; font: 400 15px/1.5 var(--font-sans); color: var(--ink); }
 
   /* ── essay layout ─────────────────────────────────────── */
-  /* Under 1024 the margin badge becomes an inline label above the paragraph. */
+  /* The badge column is decided by the width of the essay's own container,
+     never the viewport, so the reader survives being embedded at any size —
+     in a drawer, in a split view, in a preview pane. */
+  .essay { container-type: inline-size; }
+
+  /* Under 1024 the margin badge becomes an inline label above the paragraph,
+     with 8px clear beneath it. */
   .p-row {
     display: block;
     max-width: var(--measure);
@@ -769,12 +775,16 @@
   }
   .p-row > .badge-cell {
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: flex-start;
+    gap: 12px;
     margin-bottom: 8px;
   }
   .p-row > .note-cell { display: none; }
+  .margin-note { display: none; }
 
-  @media (min-width: 1024px) {
+  @container (min-width: 1024px) {
     .p-row {
       display: grid;
       grid-template-columns: 132px 32px minmax(0, var(--measure));
@@ -782,9 +792,10 @@
       max-width: none;
       padding: 0 24px;
     }
+    /* Right-aligned in its 132px column, top aligned to the block's first
+       line: 7px is the offset that sits the badge on the 19px/1.7 baseline. */
     .p-row > .badge-cell {
-      justify-content: flex-end;
-      align-items: flex-start;
+      align-items: flex-end;
       padding-top: 7px;
       margin-bottom: 0;
     }
@@ -793,6 +804,7 @@
       justify-content: flex-end;
       padding-top: 6px;
     }
+    .margin-note { display: block; }
   }
 
   .margin-note {
@@ -803,20 +815,54 @@
   }
 
   /* Blur is a filter, so the text is already laid out underneath and
-     revealing never moves the scroll. */
-  .spoiler { position: relative; }
-  .gated { filter: blur(6px); user-select: none; }
-  .gate {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    pointer-events: none;
+     revealing never moves the scroll. It is never a solid cover: the shape of
+     what is being withheld stays visible, which is the honest version. */
+  .gated { filter: blur(5px); user-select: none; }
+  /* The range is stated legibly above the blur, and the way out sits below it. */
+  .spoiler-range { display: block; margin-bottom: 10px; }
+  .spoiler-reveal { display: inline-flex; margin-top: 14px; }
+
+  /* ── citation drawer ──────────────────────────────────── */
+  /* Below 640 a bottom sheet; to 1023 a 480px centred sheet; from 1024 a
+     360px drawer at the right, which from 1280 sits beside the measure
+     rather than over it (see .reader-frame below). */
+  .cite-drawer {
+    position: fixed;
+    z-index: 40;
+    inset: auto 0 0 0;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: var(--paper);
+    border-top: 1px solid var(--rule);
+    padding: 20px 24px 24px;
   }
-  .gate > * { pointer-events: auto; }
+
+  @media (min-width: 640px) {
+    .cite-drawer {
+      inset: auto auto 50% 50%;
+      transform: translate(-50%, 50%);
+      width: 480px;
+      border: 1px solid var(--rule);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .cite-drawer {
+      inset: 0 0 0 auto;
+      transform: none;
+      width: 360px;
+      max-height: none;
+      border: 0;
+      border-left: 1px solid var(--rule);
+      padding: 24px;
+    }
+  }
+
+  /* From 1280 the reader gives the drawer its own room instead of being
+     covered by it. Below that the drawer is an overlay and nothing moves. */
+  @media (min-width: 1280px) {
+    .reader-frame[data-cite="open"] { padding-right: 360px; }
+  }
 
   /* ── application shell ───────────────────────────────── */
   .topbar {

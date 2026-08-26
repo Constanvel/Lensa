@@ -1,18 +1,26 @@
 import { supabaseServer } from "./supabase/server";
 import type { Lens } from "./lenses";
-import type { Block, Character, Claim, Essay, Work } from "./types";
+import { numberParagraphs } from "./types";
+import type { Block, Character, Claim, Counterpoint, CounterpointEssay, Essay, Work } from "./types";
+
+/** Without the counterpoint embed, for use inside a counterpoint query. */
+const ESSAY_CORE = `
+  id, slug, title, thesis, lenses, spoiler_level, status, reading_minutes,
+  published_at, updated_at,
+  author:profiles!essays_author_id_fkey ( id, handle, display_name ),
+  character:characters ( id, slug, name, work:works ( id, slug, title, unit_label ) )
+`;
 
 const ESSAY_SELECT = `
-  id, slug, title, thesis, lenses, spoiler_level, status, reading_minutes,
-  published_at, updated_at, answers_essay_id, contests, steelman, steelman_mark,
-  author:profiles!essays_author_id_fkey ( id, handle, display_name ),
-  character:characters ( id, slug, name, work:works ( slug, title ) )
+  ${ESSAY_CORE},
+  counterpoint:counterpoints ( id, essay_id, target_block_id, claim, strongest, mark )
 `;
 
 const BLOCK_SELECT = `
   id, essay_id, position, kind, claim_kind, body, margin_note,
   covers_from, covers_to, revised_after_essay_id,
-  citation:citations ( id, block_id, work_title, locator, quote )
+  citations ( id, block_id, chapter, quote, work:works ( slug, title, unit_label ) ),
+  contests ( user_id )
 `;
 
 /** Supabase returns embedded one-to-one rows as objects; the types line up. */
@@ -189,25 +197,80 @@ export async function blocksForEssay(essayId: string) {
   return rows<Block>(data);
 }
 
-export async function counterpointsFor(essayId: string) {
+type CounterpointRow = Counterpoint & { essay: Essay | null };
+
+/**
+ * A counterpoint answers a paragraph, so it is reached through blocks rather
+ * than through the essay. Two round trips instead of a filter on an embedded
+ * resource, which is the version that cannot silently return the wrong set.
+ */
+async function counterpointsOnBlocks(blocks: { id: string; paragraph: number }[]) {
+  if (blocks.length === 0) return [];
+  const paragraph = new Map(blocks.map((block) => [block.id, block.paragraph]));
+
   const supabase = await supabaseServer();
   const { data } = await supabase
-    .from("essays")
-    .select(ESSAY_SELECT)
-    .eq("answers_essay_id", essayId)
-    .eq("status", "published")
-    .order("published_at", { ascending: false });
-  return rows<Essay>(data);
+    .from("counterpoints")
+    .select(`id, essay_id, target_block_id, claim, strongest, mark, essay:essays ( ${ESSAY_CORE} )`)
+    .in("target_block_id", [...paragraph.keys()]);
+
+  return rows<CounterpointRow>(data)
+    .filter((row) => row.essay?.status === "published")
+    .map(({ essay, ...counterpoint }) => ({
+      ...(essay as Essay),
+      counterpoint,
+      targetParagraph: paragraph.get(counterpoint.target_block_id) ?? 0,
+    }))
+    .sort((a, b) => (b.published_at ?? "").localeCompare(a.published_at ?? "")) as CounterpointEssay[];
 }
 
-export async function countCounterpoints(essayId: string) {
+/**
+ * Blocks with the number a reader would give them. Headings take no number,
+ * so a block's position and its paragraph number are not the same thing.
+ */
+async function blocksOf(essayIds: string[]) {
+  if (essayIds.length === 0) return [];
   const supabase = await supabaseServer();
-  const { count } = await supabase
+  const { data } = await supabase.from("blocks").select("id, position, kind, essay_id").in("essay_id", essayIds);
+
+  return numberParagraphs(rows<{ id: string; position: number; kind: string; essay_id: string }>(data));
+}
+
+export async function counterpointsFor(essayId: string) {
+  return counterpointsOnBlocks(await blocksOf([essayId]));
+}
+
+export async function essayIdOfBlock(blockId: string) {
+  const supabase = await supabaseServer();
+  const { data } = await supabase.from("blocks").select("essay_id").eq("id", blockId).maybeSingle();
+  return (data?.essay_id as string | undefined) ?? null;
+}
+
+/** This reader's unfinished counterpoint against this essay, if they started one. */
+export async function draftCounterpointOn(essayId: string, authorId: string) {
+  const supabase = await supabaseServer();
+
+  const { data: blocks } = await supabase.from("blocks").select("id").eq("essay_id", essayId);
+  const blockIds = rows<{ id: string }>(blocks).map((block) => block.id);
+  if (blockIds.length === 0) return null;
+
+  const { data: drafts } = await supabase
     .from("essays")
-    .select("id", { count: "exact", head: true })
-    .eq("answers_essay_id", essayId)
-    .eq("status", "published");
-  return count ?? 0;
+    .select("id")
+    .eq("author_id", authorId)
+    .eq("status", "draft");
+
+  const draftIds = rows<{ id: string }>(drafts).map((draft) => draft.id);
+  if (draftIds.length === 0) return null;
+
+  const { data } = await supabase
+    .from("counterpoints")
+    .select("id, essay_id, target_block_id, claim, strongest, mark")
+    .in("essay_id", draftIds)
+    .in("target_block_id", blockIds)
+    .maybeSingle();
+
+  return (data as Counterpoint | null) ?? null;
 }
 
 export async function revisionsFor(essayId: string) {
@@ -296,22 +359,13 @@ export async function essaysByAuthor(authorId: string, status: "published" | "dr
 export async function counterpointsReceived(authorId: string) {
   const supabase = await supabaseServer();
   const { data: mine } = await supabase.from("essays").select("id").eq("author_id", authorId);
-  const ids = rows<{ id: string }>(mine).map((e) => e.id);
-  if (ids.length === 0) return [];
-
-  const { data } = await supabase
-    .from("essays")
-    .select(ESSAY_SELECT)
-    .in("answers_essay_id", ids)
-    .eq("status", "published")
-    .order("published_at", { ascending: false });
-  return rows<Essay>(data);
+  return counterpointsOnBlocks(await blocksOf(rows<{ id: string }>(mine).map((e) => e.id)));
 }
 
-/** Steelmen written against this author's essays that still want a verdict. */
+/** Steelmen written against this author's paragraphs that still want a verdict. */
 export async function steelmenAwaiting(authorId: string) {
   const received = await counterpointsReceived(authorId);
-  return received.filter((essay) => essay.steelman && !essay.steelman_mark);
+  return received.filter((essay) => !essay.counterpoint.mark);
 }
 
 export async function authorLensTally(authorId: string) {

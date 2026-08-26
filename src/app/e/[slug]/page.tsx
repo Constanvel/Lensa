@@ -66,16 +66,21 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
           ))}
         </div>
 
-        {essay.answers_essay_id && (
+        {essay.counterpoint && (
           <div className="quiet-bar mb-6">
             <div className="meta-row mb-[10px]">
               <span className="meta">The argument I am answering</span>
-              {essay.steelman_mark === "fair" && <span className="meta meta-moss">Marked fair by author</span>}
-              {essay.steelman_mark === "disputed" && (
+              {essay.counterpoint.mark === "fair" && (
+                <span className="meta meta-moss">Marked fair by author</span>
+              )}
+              {essay.counterpoint.mark === "disputed" && (
                 <span className="meta meta-accent">Disputed by author</span>
               )}
             </div>
-            <p className="serif-md m-0 text-[color:var(--ink2)]">{essay.steelman}</p>
+            <p className="serif-md m-0 text-[color:var(--ink2)]">{essay.counterpoint.claim}</p>
+            <p className="serif-md mt-3 mb-0 text-[color:var(--ink2)]">
+              At its strongest · {essay.counterpoint.strongest}
+            </p>
           </div>
         )}
 
@@ -146,14 +151,14 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
             className="card card-link plain mt-4 block cursor-pointer"
             style={{ marginTop: i === 0 ? 24 : 16 }}
           >
-            <div className="meta mb-4">Contests · {counterpoint.contests ?? "thesis"}</div>
+            <div className="meta mb-4">Contests · paragraph {counterpoint.targetParagraph}</div>
             <p className="body-p mb-3">{counterpoint.thesis}</p>
             <h3 className="eyebrow mb-4">{counterpoint.title}</h3>
             <div className="meta-row meta">
               {counterpoint.lenses?.length ? <span>{lensNames(counterpoint.lenses)}</span> : null}
               {counterpoint.reading_minutes ? <span>{counterpoint.reading_minutes} min</span> : null}
               <span>{counterpoint.author.display_name}</span>
-              {counterpoint.steelman_mark === "fair" && <span className="meta-moss">Marked fair</span>}
+              {counterpoint.counterpoint.mark === "fair" && <span className="meta-moss">Marked fair</span>}
             </div>
           </Link>
         ))}

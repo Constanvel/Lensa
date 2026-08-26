@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { supabaseServer } from "@/lib/supabase/server";
-import { CLAIM_LABEL, type ClaimKind } from "@/lib/types";
+import { CLAIM_LABEL, citationLabel, type Citation, type ClaimKind } from "@/lib/types";
 
 /** Every draft and published essay, with citations, as plain text. */
 export async function GET() {
@@ -14,7 +14,8 @@ export async function GET() {
     .select(
       `title, thesis, status, published_at, lenses,
        character:characters ( name, work:works ( title ) ),
-       blocks ( position, kind, claim_kind, body, citations ( work_title, locator, quote ) ),
+       blocks ( position, kind, claim_kind, body,
+                citations ( id, block_id, chapter, quote, work:works ( slug, title, unit_label ) ) ),
        revisions ( note, created_at )`,
     )
     .eq("author_id", auth.user.id)
@@ -35,7 +36,7 @@ export async function GET() {
         kind: string;
         claim_kind: ClaimKind;
         body: string;
-        citations: { work_title: string; locator: string; quote: string } | null;
+        citations: Citation[];
       }[];
       revisions: { note: string; created_at: string }[];
     };
@@ -56,10 +57,9 @@ export async function GET() {
       }
       lines.push(`[${CLAIM_LABEL[block.claim_kind].toUpperCase()}]`);
       lines.push(block.body);
-      if (block.citations) {
-        lines.push(
-          `    source: ${block.citations.work_title} · ${block.citations.locator} — “${block.citations.quote}”`,
-        );
+      for (const citation of block.citations ?? []) {
+        const quoted = citation.quote ? ` — “${citation.quote}”` : "";
+        lines.push(`    source: ${citation.work.title} · ${citationLabel(citation)}${quoted}`);
       }
       lines.push("");
     }

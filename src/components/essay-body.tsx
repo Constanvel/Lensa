@@ -1,9 +1,9 @@
 import { SpoilerBlock } from "./kit";
 import { BlockBadge } from "./ui";
-import type { Block } from "@/lib/types";
+import { citationLabel, isContested, unitNoun, type Block, type Citation } from "@/lib/types";
 
 function coversLabel(block: Block, unit: string) {
-  const noun = unit === "episodes" ? "episode" : unit === "parts" ? "part" : "chapter";
+  const noun = unitNoun(unit);
   if (block.covers_to && block.covers_to !== block.covers_from) {
     return `Covers ${noun}s ${block.covers_from}–${block.covers_to}`;
   }
@@ -11,7 +11,7 @@ function coversLabel(block: Block, unit: string) {
 }
 
 /** The citation card opens on hover or keyboard focus; no script involved. */
-function CitationMark({ index, work, locator, quote }: { index: number; work: string; locator: string; quote: string }) {
+function CitationMark({ index, citation }: { index: number; citation: Citation }) {
   return (
     <span className="group relative inline-block">
       <button
@@ -23,9 +23,9 @@ function CitationMark({ index, work, locator, quote }: { index: number; work: st
       </button>
       <span className="pointer-events-none absolute top-[30px] right-0 z-25 hidden w-[250px] border border-[color:var(--rule)] bg-[color:var(--paper)] p-[14px] text-left group-hover:block group-focus-within:block">
         <span className="meta meta-wrap mb-2 block">
-          {work} · {locator}
+          {citation.work.title} · {citationLabel(citation)}
         </span>
-        <span className="serif-sm block italic">“{quote}”</span>
+        {citation.quote && <span className="serif-sm block italic">“{citation.quote}”</span>}
       </span>
     </span>
   );
@@ -62,9 +62,12 @@ export function EssayBody({
         }
 
         const gated = block.covers_from != null && position != null && position < block.covers_from;
-        const cite = block.citation;
-        if (cite) citationIndex += 1;
-        const index = citationIndex;
+        // A block may carry several citations, numbered continuously down the
+        // essay so the marks read as one sequence rather than one per paragraph.
+        const cites = (block.citations ?? []).map((citation) => ({
+          citation,
+          index: (citationIndex += 1),
+        }));
 
         const paragraph = (
           <p className={`body-p${block.revised_after_essay_id ? " body-p-revised" : ""}`}>{block.body}</p>
@@ -75,15 +78,15 @@ export function EssayBody({
             <div className="badge-cell flex-col items-start gap-3 md:items-end">
               <span className="flex items-start">
                 <BlockBadge block={block} />
-                {cite && (
-                  <CitationMark
-                    index={index}
-                    work={cite.work_title}
-                    locator={cite.locator}
-                    quote={cite.quote}
-                  />
-                )}
+                {cites.map(({ citation, index }) => (
+                  <CitationMark key={citation.id} index={index} citation={citation} />
+                ))}
               </span>
+              {/* Oxblood is reserved, and a disputed paragraph is one of the four
+                  things it is reserved for. */}
+              {isContested(block) && (
+                <span className="meta meta-accent">Contested · {block.contests.length}</span>
+              )}
               {/* The aside lives in the margin at 1024 and up, and nowhere below it. */}
               {block.margin_note && <span className="margin-note hidden md:block">{block.margin_note}</span>}
             </div>

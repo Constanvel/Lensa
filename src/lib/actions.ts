@@ -8,11 +8,14 @@ import { supabaseServer } from "./supabase/server";
 import { MAX_LENSES_AT_ONBOARDING, MAX_LENSES_PER_ESSAY, isLens } from "./lenses";
 import {
   CLAIM_KINDS,
+  STEELMAN_MAX,
+  STEELMAN_MIN,
   THESIS_MAX,
+  asMedium,
+  asSpoilerLevel,
   oneSentence,
   readingMinutes,
   type ClaimKind,
-  type SpoilerLevel,
 } from "./types";
 
 function slugify(value: string) {
@@ -37,7 +40,7 @@ async function requireOwnEssay(essayId: string) {
   const { supabase, user } = await requireUser();
   const { data } = await supabase
     .from("essays")
-    .select("id, author_id, status, slug, character_id, answers_essay_id, steelman")
+    .select("id, author_id, status, slug, character_id")
     .eq("id", essayId)
     .maybeSingle();
   if (!data || data.author_id !== user.id) redirect("/me");
@@ -109,7 +112,7 @@ export async function createCharacter(
 
   const name = String(formData.get("name") ?? "").trim();
   const workTitle = String(formData.get("work") ?? "").trim();
-  const medium = String(formData.get("medium") ?? "novel");
+  const medium = asMedium(String(formData.get("medium") ?? "novel"));
   // Two sentences, neutral. A third is refused: judgements belong in essays.
   const description = oneSentence(String(formData.get("description") ?? "").trim(), 220, 2);
   const values = { name, work: workTitle };
@@ -180,19 +183,28 @@ export async function createDraft(characterId: string) {
   redirect(`/write/${data.id}`);
 }
 
-export async function saveDraft(essayId: string, formData: FormData) {
+/**
+ * Autosave reports back rather than failing silently: the editor keeps the
+ * text it could not save and offers Retry against the same call.
+ */
+export type SaveResult = { ok: true } | { ok: false; error: string };
+
+export async function saveDraft(essayId: string, formData: FormData): Promise<SaveResult> {
   const { supabase } = await requireOwnEssay(essayId);
 
   const thesis = oneSentence(String(formData.get("thesis") ?? ""), THESIS_MAX);
   const title = String(formData.get("title") ?? "").trim();
-  const spoiler = String(formData.get("spoiler_level") ?? "none") as SpoilerLevel;
+  const spoiler = asSpoilerLevel(String(formData.get("spoiler_level") ?? "none"));
 
-  await supabase
+  const { error } = await supabase
     .from("essays")
     .update({ thesis, title: title || null, spoiler_level: spoiler, updated_at: new Date().toISOString() })
     .eq("id", essayId);
 
+  if (error) return { ok: false, error: error.message };
+
   revalidatePath(`/write/${essayId}`);
+  return { ok: true };
 }
 
 export async function toggleEssayLens(essayId: string, lens: string) {
@@ -200,7 +212,7 @@ export async function toggleEssayLens(essayId: string, lens: string) {
   const { supabase } = await requireOwnEssay(essayId);
 
   const { data } = await supabase.from("essays").select("lenses").eq("id", essayId).single();
-  const current: string[] = data?.lenses ?? [];
+  const current = data?.lenses ?? [];
   const next = current.includes(lens)
     ? current.filter((l) => l !== lens)
     : [...current, lens].slice(-MAX_LENSES_PER_ESSAY);
@@ -209,13 +221,26 @@ export async function toggleEssayLens(essayId: string, lens: string) {
   revalidatePath(`/write/${essayId}`);
 }
 
-export async function saveBlock(essayId: string, blockId: string, body: string, kind: ClaimKind) {
+export async function saveBlock(
+  essayId: string,
+  blockId: string,
+  body: string,
+  kind: ClaimKind,
+): Promise<SaveResult> {
   const { supabase } = await requireOwnEssay(essayId);
   const patch: { body: string; claim_kind?: ClaimKind } = { body };
   if (CLAIM_KINDS.includes(kind)) patch.claim_kind = kind;
 
-  await supabase.from("blocks").update(patch).eq("id", blockId).eq("essay_id", essayId);
+  const { error } = await supabase
+    .from("blocks")
+    .update(patch)
+    .eq("id", blockId)
+    .eq("essay_id", essayId);
+
+  if (error) return { ok: false, error: error.message };
+
   revalidatePath(`/write/${essayId}`);
+  return { ok: true };
 }
 
 export async function addBlock(essayId: string) {
@@ -238,46 +263,57 @@ export async function removeBlock(essayId: string, blockId: string) {
   revalidatePath(`/write/${essayId}`);
 }
 
+/**
+ * A block may carry several citations, so this adds one or edits one by id.
+ * The chapter is the whole locator: page numbers are refused because editions
+ * disagree, and the display form is built from the work's unit label.
+ */
 export async function saveCitation(essayId: string, blockId: string, formData: FormData) {
   const { supabase } = await requireOwnEssay(essayId);
 
-  const workTitle = String(formData.get("work_title") ?? "").trim();
-  const locator = String(formData.get("locator") ?? "").trim();
+  const citationId = String(formData.get("citation_id") ?? "").trim();
+  const workId = String(formData.get("work_id") ?? "").trim();
+  const chapter = Number(formData.get("chapter"));
   const quote = String(formData.get("quote") ?? "")
     .trim()
     .slice(0, 200);
 
-  if (!workTitle || !locator || !quote) return;
+  if (!workId || !Number.isInteger(chapter) || chapter < 1) return;
 
-  await supabase
-    .from("citations")
-    .upsert({ block_id: blockId, work_title: workTitle, locator, quote }, { onConflict: "block_id" });
+  const row = { block_id: blockId, work_id: workId, chapter, quote: quote || null };
+  if (citationId) {
+    await supabase.from("citations").update(row).eq("id", citationId).eq("block_id", blockId);
+  } else {
+    await supabase.from("citations").insert(row);
+  }
 
   revalidatePath(`/write/${essayId}`);
 }
 
-export async function removeCitation(essayId: string, blockId: string) {
+export async function removeCitation(essayId: string, citationId: string) {
   const { supabase } = await requireOwnEssay(essayId);
-  await supabase.from("citations").delete().eq("block_id", blockId);
+  await supabase.from("citations").delete().eq("id", citationId);
   revalidatePath(`/write/${essayId}`);
 }
 
 /**
  * Citation enforcement is a warning, not a blocker (MVP scope): an unsourced
  * Textual claim publishes demoted to Interpretive with a dashed underline.
- * The steelman gate is the one hard stop, and only for counterpoints.
+ *
+ * The steelman gate needs no check here any more. A counterpoint row cannot
+ * exist without both answers, so a counterpoint that skipped the gate is not
+ * a state the database can hold.
  */
 export async function publishEssay(essayId: string) {
   const { supabase, essay } = await requireOwnEssay(essayId);
 
   const { data: full } = await supabase
     .from("essays")
-    .select("title, thesis, answers_essay_id, steelman")
+    .select("title, thesis")
     .eq("id", essayId)
     .single();
 
   if (!full?.thesis?.trim() || !full?.title?.trim()) redirect(`/write/${essayId}?blocked=thesis`);
-  if (full.answers_essay_id && !full.steelman?.trim()) redirect(`/write/${essayId}?blocked=steelman`);
 
   const { data: blocks } = await supabase.from("blocks").select("body").eq("essay_id", essayId);
   const words = (blocks ?? []).map((b) => b.body).join(" ");
@@ -306,16 +342,25 @@ export async function unpublishEssay(essayId: string) {
 
 // ─── the steelman gate ─────────────────────────────────────────────────────
 
-/** Step one. No rebuttal exists until the opposing argument has been stated. */
+/**
+ * Step one. No rebuttal exists until the opposing argument has been stated —
+ * twice: what the paragraph claims, and the strongest case for that claim.
+ * Both are stored on the counterpoint row, which is what makes the gate real.
+ */
 export async function startCounterpoint(answersEssayId: string, formData: FormData) {
   const { supabase, user } = await requireUser();
 
-  const steelman = String(formData.get("steelman") ?? "")
+  const targetBlockId = String(formData.get("target_block_id") ?? "").trim();
+  const claim = String(formData.get("claim") ?? "")
     .trim()
-    .slice(0, 320);
-  const contests = String(formData.get("contests") ?? "thesis").trim();
+    .slice(0, STEELMAN_MAX);
+  const strongest = String(formData.get("strongest") ?? "")
+    .trim()
+    .slice(0, STEELMAN_MAX);
 
-  if (steelman.length < 20) redirect(`/counterpoint/new/${answersEssayId}?short=1`);
+  if (claim.length < STEELMAN_MIN || strongest.length < STEELMAN_MIN) {
+    redirect(`/counterpoint/new/${answersEssayId}?short=1`);
+  }
 
   const { data: original } = await supabase
     .from("essays")
@@ -325,32 +370,58 @@ export async function startCounterpoint(answersEssayId: string, formData: FormDa
 
   if (!original) redirect("/");
 
-  const { data: existing } = await supabase
+  // The target has to be a paragraph of the essay being answered, whatever
+  // the form posted: a Server Action is reachable by direct POST.
+  const { data: blocks } = await supabase
+    .from("blocks")
+    .select("id")
+    .eq("essay_id", answersEssayId)
+    .eq("kind", "paragraph");
+
+  const blockIds = (blocks ?? []).map((block) => block.id);
+  if (!blockIds.includes(targetBlockId)) redirect(`/counterpoint/new/${answersEssayId}?error=1`);
+
+  const { data: drafts } = await supabase
     .from("essays")
     .select("id")
     .eq("author_id", user.id)
-    .eq("answers_essay_id", answersEssayId)
-    .eq("status", "draft")
-    .maybeSingle();
+    .eq("status", "draft");
+
+  const draftIds = (drafts ?? []).map((draft) => draft.id);
+  const { data: existing } = draftIds.length
+    ? await supabase
+        .from("counterpoints")
+        .select("id, essay_id")
+        .in("essay_id", draftIds)
+        .in("target_block_id", blockIds)
+        .maybeSingle()
+    : { data: null };
 
   if (existing) {
-    await supabase.from("essays").update({ steelman, contests }).eq("id", existing.id);
-    redirect(`/write/${existing.id}`);
+    await supabase
+      .from("counterpoints")
+      .update({ target_block_id: targetBlockId, claim, strongest })
+      .eq("id", existing.id);
+    redirect(`/write/${existing.essay_id}`);
   }
 
   const { data, error } = await supabase
     .from("essays")
-    .insert({
-      author_id: user.id,
-      character_id: original.character_id,
-      answers_essay_id: answersEssayId,
-      contests,
-      steelman,
-    })
+    .insert({ author_id: user.id, character_id: original.character_id })
     .select("id")
     .single();
 
   if (error) redirect(`/counterpoint/new/${answersEssayId}?error=1`);
+
+  const { error: gateError } = await supabase
+    .from("counterpoints")
+    .insert({ essay_id: data.id, target_block_id: targetBlockId, claim, strongest });
+
+  // Without the gate row this is not a counterpoint, so the draft goes too.
+  if (gateError) {
+    await supabase.from("essays").delete().eq("id", data.id);
+    redirect(`/counterpoint/new/${answersEssayId}?error=1`);
+  }
 
   await supabase.from("blocks").insert({ essay_id: data.id, position: 0, claim_kind: "interpretive" });
   redirect(`/write/${data.id}`);
@@ -360,23 +431,28 @@ export async function startCounterpoint(answersEssayId: string, formData: FormDa
 export async function markSteelman(counterpointId: string, mark: "fair" | "disputed") {
   const { supabase, user } = await requireUser();
 
-  const { data } = await supabase
-    .from("essays")
-    .select("id, answers_essay_id")
+  const { data: counterpoint } = await supabase
+    .from("counterpoints")
+    .select("id, target_block_id")
     .eq("id", counterpointId)
     .maybeSingle();
 
-  if (!data?.answers_essay_id) redirect("/me");
+  if (!counterpoint) redirect("/me");
 
-  const { data: original } = await supabase
-    .from("essays")
-    .select("author_id")
-    .eq("id", data.answers_essay_id)
+  // The verdict belongs to whoever wrote the paragraph being answered.
+  const { data: target } = await supabase
+    .from("blocks")
+    .select("essay_id")
+    .eq("id", counterpoint.target_block_id)
     .maybeSingle();
+
+  const { data: original } = target
+    ? await supabase.from("essays").select("author_id").eq("id", target.essay_id).maybeSingle()
+    : { data: null };
 
   if (original?.author_id !== user.id) redirect("/me");
 
-  await supabase.from("essays").update({ steelman_mark: mark }).eq("id", counterpointId);
+  await supabase.from("counterpoints").update({ mark }).eq("id", counterpointId);
   revalidatePath("/me");
 }
 

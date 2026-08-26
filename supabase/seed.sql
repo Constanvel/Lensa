@@ -2,6 +2,14 @@
 --   psql "$DATABASE_URL" -f supabase/seed.sql
 -- Inserts three writers straight into auth.users; the on_auth_user_created
 -- trigger builds their profiles. Safe to run once on a fresh database.
+--
+-- Six published essays across three works and four characters, carrying the
+-- cases worth developing against: unsourced Textual blocks that publish
+-- demoted, blocks contested by more than one reader, blocks that gate on a
+-- reading position, a block with two citations, and two counterpoints that
+-- came through the steelman gate onto a specific paragraph.
+
+set client_encoding = 'UTF8';
 
 begin;
 
@@ -57,7 +65,7 @@ insert into characters (id, slug, name, work_id, description, created_by) values
    '11111111-1111-4111-8111-111111111111')
 on conflict (id) do nothing;
 
--- ─── the founding essay ───────────────────────────────────────────────────
+-- ─── 1 · the founding essay ───────────────────────────────────────────────
 insert into essays (id, slug, author_id, character_id, title, thesis, lenses, spoiler_level,
                     status, reading_minutes, published_at) values
   ('cccccccc-0000-4000-8000-000000000001', 'the-hawk-was-always-a-ladder',
@@ -93,34 +101,34 @@ insert into blocks (id, essay_id, position, kind, claim_kind, body, margin_note,
    null, null, null)
 on conflict (id) do nothing;
 
-insert into citations (block_id, work_id, work_title, locator, quote) values
-  ('dddddddd-0000-4000-8000-000000000001', 'aaaaaaaa-0000-4000-8000-000000000001', 'Berserk', 'ch. 093',
+-- The third paragraph carries two citations: one block, two chapters.
+insert into citations (id, block_id, work_id, chapter, quote) values
+  ('ffffffff-0000-4000-8000-000000000001', 'dddddddd-0000-4000-8000-000000000001',
+   'aaaaaaaa-0000-4000-8000-000000000001', 93,
    'A friend is not someone who follows me. It is someone who has a dream of his own.'),
-  ('dddddddd-0000-4000-8000-000000000003', 'aaaaaaaa-0000-4000-8000-000000000001', 'Berserk', 'ch. 106',
+  ('ffffffff-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000003',
+   'aaaaaaaa-0000-4000-8000-000000000001', 106,
    'I know my place here is not permanent.'),
-  ('dddddddd-0000-4000-8000-000000000006', 'aaaaaaaa-0000-4000-8000-000000000001', 'Berserk', 'ch. 297–301',
+  ('ffffffff-0000-4000-8000-000000000003', 'dddddddd-0000-4000-8000-000000000003',
+   'aaaaaaaa-0000-4000-8000-000000000001', 73, null),
+  ('ffffffff-0000-4000-8000-000000000004', 'dddddddd-0000-4000-8000-000000000006',
+   'aaaaaaaa-0000-4000-8000-000000000001', 297,
    'Everything I have done, I have done for this.')
-on conflict (block_id) do nothing;
+on conflict (id) do nothing;
 
--- ─── two counterpoints, each through the steelman gate ───────────────────
+-- ─── 2 and 3 · two counterpoints, each through the steelman gate ──────────
 insert into essays (id, slug, author_id, character_id, title, thesis, lenses, spoiler_level, status,
-                    reading_minutes, published_at, answers_essay_id, contests, steelman, steelman_mark) values
+                    reading_minutes, published_at) values
   ('cccccccc-0000-4000-8000-000000000002', 'warmth-is-not-evidence',
    '22222222-2222-4222-8222-222222222222', 'bbbbbbbb-0000-4000-8000-000000000001',
    'Warmth Is Not Evidence',
    'Reading Griffith''s affection as instrumentation requires ignoring the scenes where he has nothing to gain.',
-   '{psychoanalytic}', 'arc', 'published', 11, now() - interval '6 days',
-   'cccccccc-0000-4000-8000-000000000001', 'paragraph 4',
-   'Kovač argues that the band was never an end for Griffith, so the Eclipse introduces no new intention. The reading rests on his own definition of friendship, which excludes anyone who depends on him.',
-   'fair'),
+   '{psychoanalytic}', 'arc', 'published', 11, now() - interval '6 days'),
   ('cccccccc-0000-4000-8000-000000000003', 'late-evidence',
    '33333333-3333-4333-8333-333333333333', 'bbbbbbbb-0000-4000-8000-000000000001',
    'Late Evidence',
    'Instrumental language in the Golden Age arc is retrospective: it clusters in scenes drawn after the Eclipse was already fixed.',
-   '{narratological}', 'full', 'published', 9, now() - interval '2 days',
-   'cccccccc-0000-4000-8000-000000000001', 'thesis',
-   'Kovač reads the arc as one continuous intention, with the Eclipse as its largest instance rather than its turn. The evidence is the consistency of Griffith''s stated aims across the whole arc.',
-   null)
+   '{narratological}', 'full', 'published', 9, now() - interval '2 days')
 on conflict (id) do nothing;
 
 insert into blocks (essay_id, position, kind, claim_kind, body) values
@@ -134,6 +142,20 @@ insert into blocks (essay_id, position, kind, claim_kind, body) values
    'That distinction matters because it changes what the reader is asked to have missed. Under her reading we were inattentive; under mine we were reading a character who had not yet been decided.')
 on conflict do nothing;
 
+-- Each answers one paragraph, and each carries both steelman answers. The
+-- second essay contests the friendship paragraph; the third contests the
+-- opening claim, which is where the thesis is actually argued.
+insert into counterpoints (essay_id, target_block_id, claim, strongest, mark) values
+  ('cccccccc-0000-4000-8000-000000000002', 'dddddddd-0000-4000-8000-000000000004',
+   'Kovač argues that the band was never an end for Griffith, so the Eclipse introduces no new intention.',
+   'At its strongest the reading rests on his own definition of friendship, which excludes anyone who depends on him — a line he offers unprompted and never revises.',
+   'fair'),
+  ('cccccccc-0000-4000-8000-000000000003', 'dddddddd-0000-4000-8000-000000000001',
+   'Kovač reads the arc as one continuous intention, with the Eclipse as its largest instance rather than its turn.',
+   'The strongest version needs no turning point at all: the consistency of Griffith''s stated aims across the whole arc is itself the evidence, and consistency is hard to fake across ten volumes.',
+   null)
+on conflict (essay_id) do nothing;
+
 insert into revisions (essay_id, prompted_by_essay_id, note) values
   ('cccccccc-0000-4000-8000-000000000001', 'cccccccc-0000-4000-8000-000000000002',
    'Narrowed the friendship paragraph: the definition is Griffith''s, not the essay''s.'),
@@ -142,6 +164,128 @@ insert into revisions (essay_id, prompted_by_essay_id, note) values
 
 update blocks set revised_after_essay_id = 'cccccccc-0000-4000-8000-000000000002'
 where id = 'dddddddd-0000-4000-8000-000000000004';
+
+-- ─── 4 · Casca, with an unsourced Textual claim ───────────────────────────
+insert into essays (id, slug, author_id, character_id, title, thesis, lenses, spoiler_level,
+                    status, reading_minutes, published_at) values
+  ('cccccccc-0000-4000-8000-000000000004', 'the-debt-and-the-sword',
+   '33333333-3333-4333-8333-333333333333', 'bbbbbbbb-0000-4000-8000-000000000002',
+   'The Debt and the Sword',
+   'Casca''s loyalty is narrated as an unpaid debt, and the arc never gives her a register in which it could be settled.',
+   '{narratological,jungian}', 'arc', 'published', 10, now() - interval '9 days')
+on conflict (id) do nothing;
+
+insert into blocks (id, essay_id, position, kind, claim_kind, body, margin_note, covers_from, covers_to) values
+  ('dddddddd-0000-4000-8000-000000000101', 'cccccccc-0000-4000-8000-000000000004', 0, 'paragraph', 'textual',
+   'The scene that establishes Casca''s attachment is not a scene of affection. It is a rescue, and the arc stages it as a transaction: a sword handed over, a life kept, a debt opened. Every later scene that could be read as love is built on top of that ledger rather than beside it.',
+   null, null, null),
+  ('dddddddd-0000-4000-8000-000000000102', 'cccccccc-0000-4000-8000-000000000004', 1, 'paragraph', 'interpretive',
+   'What makes the debt legible is who is allowed to narrate it. Casca explains herself twice in the arc, and both times to Guts — never to Griffith, and never to the reader directly. The telling routes her interior through the one man who has no standing to forgive the debt, which is why nothing she says ever discharges it.',
+   'Both accounts are given at night, and both are interrupted.', null, null),
+  ('dddddddd-0000-4000-8000-000000000103', 'cccccccc-0000-4000-8000-000000000004', 2, 'paragraph', 'textual',
+   'She is also the only commander whose competence is demonstrated before it is stated. The arc shows her holding a line, then has someone remark on it afterwards, and it does this consistently enough that the pattern reads as deliberate rather than incidental.',
+   null, null, null),
+  ('dddddddd-0000-4000-8000-000000000104', 'cccccccc-0000-4000-8000-000000000004', 3, 'paragraph', 'speculative',
+   'If the debt is the structure, then her collapse after the Eclipse is not the loss of a self so much as the loss of the only account in which that self was denominated. She does not stop being a person. She stops being owed to, and stops owing, and the arc has given her nothing else to be.',
+   null, 297, 301)
+on conflict (id) do nothing;
+
+-- Note the gap: block 103 is Textual and has no citation. It publishes demoted
+-- to Interpretive with a dashed underline, which is the case worth seeing.
+insert into citations (id, block_id, work_id, chapter, quote) values
+  ('ffffffff-0000-4000-8000-000000000005', 'dddddddd-0000-4000-8000-000000000101',
+   'aaaaaaaa-0000-4000-8000-000000000001', 73,
+   'You gave me a sword. I have not put it down since.')
+on conflict (id) do nothing;
+
+-- ─── 5 · Ahab ─────────────────────────────────────────────────────────────
+insert into essays (id, slug, author_id, character_id, title, thesis, lenses, spoiler_level,
+                    status, reading_minutes, published_at) values
+  ('cccccccc-0000-4000-8000-000000000005', 'the-purpose-stated-once',
+   '11111111-1111-4111-8111-111111111111', 'bbbbbbbb-0000-4000-8000-000000000003',
+   'The Purpose Stated Once',
+   'Ahab states his purpose once and never restates it, and the novel spends four hundred pages testing whether a purpose can be revised after it has been spoken aloud.',
+   '{nietzschean}', 'full', 'published', 13, now() - interval '5 days')
+on conflict (id) do nothing;
+
+insert into blocks (id, essay_id, position, kind, claim_kind, body, margin_note, covers_from, covers_to) values
+  ('dddddddd-0000-4000-8000-000000000201', 'cccccccc-0000-4000-8000-000000000005', 0, 'paragraph', 'textual',
+   'The quarter-deck scene is the only place in the novel where Ahab explains himself to the crew. He nails up the doubloon, names the whale, and takes an oath from every man aboard. After it, he never argues his case again — not to Starbuck, not to himself, not to the reader.',
+   null, null, null),
+  ('dddddddd-0000-4000-8000-000000000202', 'cccccccc-0000-4000-8000-000000000005', 1, 'paragraph', 'interpretive',
+   'The silence afterwards is the argument. A man who keeps justifying a decision is a man still deciding; Ahab has made the value rather than found it, and a made value does not answer to evidence. What looks like monomania from the deck is, from inside, simply the absence of any further question to ask.',
+   null, null, null),
+  ('dddddddd-0000-4000-8000-000000000203', 'cccccccc-0000-4000-8000-000000000005', 2, 'paragraph', 'textual',
+   'Starbuck is given three separate opportunities to end the voyage, and takes none of them. The novel is careful to make each refusal his own rather than a failure of nerve, and careful never to explain it.',
+   null, null, null),
+  ('dddddddd-0000-4000-8000-000000000204', 'cccccccc-0000-4000-8000-000000000005', 3, 'paragraph', 'speculative',
+   'The symmetry that makes the ending unbearable is that the whale is under no such obligation. Ahab has bound himself with an oath sworn in front of witnesses; the animal has bound itself with nothing at all. Read that way, the chase is not man against nature but a made value against a world that never agreed to the terms.',
+   null, 133, 135)
+on conflict (id) do nothing;
+
+-- 203 is Textual and unsourced, on purpose: the second demoted claim in the seed.
+insert into citations (id, block_id, work_id, chapter, quote) values
+  ('ffffffff-0000-4000-8000-000000000006', 'dddddddd-0000-4000-8000-000000000201',
+   'aaaaaaaa-0000-4000-8000-000000000002', 36,
+   'Whosoever of ye raises me a white-headed whale with a wrinkled brow and a crooked jaw.'),
+  ('ffffffff-0000-4000-8000-000000000007', 'dddddddd-0000-4000-8000-000000000204',
+   'aaaaaaaa-0000-4000-8000-000000000002', 135, null)
+on conflict (id) do nothing;
+
+-- ─── 6 · Shinji ───────────────────────────────────────────────────────────
+insert into essays (id, slug, author_id, character_id, title, thesis, lenses, spoiler_level,
+                    status, reading_minutes, published_at) values
+  ('cccccccc-0000-4000-8000-000000000006', 'the-refusal-that-counts',
+   '22222222-2222-4222-8222-222222222222', 'bbbbbbbb-0000-4000-8000-000000000004',
+   'The Refusal That Counts',
+   'Every decision the series treats as Shinji''s own is a refusal, and each one is narrated as a failure by someone who needs him in the cockpit.',
+   '{psychoanalytic,narratological}', 'full', 'published', 12, now() - interval '3 days')
+on conflict (id) do nothing;
+
+insert into blocks (id, essay_id, position, kind, claim_kind, body, margin_note, covers_from, covers_to) values
+  ('dddddddd-0000-4000-8000-000000000301', 'cccccccc-0000-4000-8000-000000000006', 0, 'paragraph', 'interpretive',
+   'The series is usually described as being about a boy who will not act. It is more precisely about a boy whose only acts are refusals, and about an institution that has arranged things so that refusing is the one move it cannot survive being made.',
+   null, null, null),
+  ('dddddddd-0000-4000-8000-000000000302', 'cccccccc-0000-4000-8000-000000000006', 1, 'paragraph', 'textual',
+   'When he does refuse, the series does not frame it as growth. It frames it through Misato, through Ritsuko, through the operations room — through people whose job depends on the answer. The refusal is real and the framing is hostile, and both are on screen at once.',
+   'The camera stays in the control room for the whole exchange.', 18, 19),
+  ('dddddddd-0000-4000-8000-000000000303', 'cccccccc-0000-4000-8000-000000000006', 2, 'paragraph', 'interpretive',
+   'This is why the compliments land so badly. Praise arrives only after he has done the thing that was needed, and it arrives from the people who needed it, which makes it indistinguishable from payment. He notices this before the audience does.',
+   null, null, null),
+  ('dddddddd-0000-4000-8000-000000000304', 'cccccccc-0000-4000-8000-000000000006', 3, 'paragraph', 'speculative',
+   'The ending most viewers reject is the only one that treats a refusal as a decision rather than a symptom. It is badly paced, it is visibly under-resourced, and it is the single moment in the series where nobody in the room needs him to say yes.',
+   null, 25, 26)
+on conflict (id) do nothing;
+
+insert into citations (id, block_id, work_id, chapter, quote) values
+  ('ffffffff-0000-4000-8000-000000000008', 'dddddddd-0000-4000-8000-000000000302',
+   'aaaaaaaa-0000-4000-8000-000000000003', 19,
+   'I will not pilot it. Not for you, not for anyone.')
+on conflict (id) do nothing;
+
+-- ─── contested blocks ─────────────────────────────────────────────────────
+-- The friendship paragraph is disputed by both other writers; the Eclipse
+-- paragraph and one Ahab paragraph by one each.
+insert into contests (block_id, user_id) values
+  ('dddddddd-0000-4000-8000-000000000004', '22222222-2222-4222-8222-222222222222'),
+  ('dddddddd-0000-4000-8000-000000000004', '33333333-3333-4333-8333-333333333333'),
+  ('dddddddd-0000-4000-8000-000000000006', '22222222-2222-4222-8222-222222222222'),
+  ('dddddddd-0000-4000-8000-000000000203', '33333333-3333-4333-8333-333333333333'),
+  ('dddddddd-0000-4000-8000-000000000301', '11111111-1111-4111-8111-111111111111')
+on conflict do nothing;
+
+-- ─── reading positions ────────────────────────────────────────────────────
+-- Ines is past the Eclipse, so nothing blurs for her. Tomás is mid-arc and
+-- will see the gated paragraphs covered. Wren has finished everything.
+insert into reading_progress (user_id, work_id, position) values
+  ('11111111-1111-4111-8111-111111111111', 'aaaaaaaa-0000-4000-8000-000000000001', 310),
+  ('11111111-1111-4111-8111-111111111111', 'aaaaaaaa-0000-4000-8000-000000000002', 135),
+  ('22222222-2222-4222-8222-222222222222', 'aaaaaaaa-0000-4000-8000-000000000001', 120),
+  ('22222222-2222-4222-8222-222222222222', 'aaaaaaaa-0000-4000-8000-000000000003', 18),
+  ('33333333-3333-4333-8333-333333333333', 'aaaaaaaa-0000-4000-8000-000000000001', 551),
+  ('33333333-3333-4333-8333-333333333333', 'aaaaaaaa-0000-4000-8000-000000000002', 135),
+  ('33333333-3333-4333-8333-333333333333', 'aaaaaaaa-0000-4000-8000-000000000003', 26)
+on conflict (user_id, work_id) do nothing;
 
 -- ─── the claim ledger ─────────────────────────────────────────────────────
 insert into claims (id, character_id, text, work_title, locator) values
@@ -167,6 +311,7 @@ insert into claim_links (claim_id, essay_id, stance) values
   ('eeeeeeee-0000-4000-8000-000000000003', 'cccccccc-0000-4000-8000-000000000002', 'contesting'),
   ('eeeeeeee-0000-4000-8000-000000000004', 'cccccccc-0000-4000-8000-000000000001', 'supporting'),
   ('eeeeeeee-0000-4000-8000-000000000005', 'cccccccc-0000-4000-8000-000000000002', 'contesting'),
+  ('eeeeeeee-0000-4000-8000-000000000005', 'cccccccc-0000-4000-8000-000000000004', 'supporting'),
   ('eeeeeeee-0000-4000-8000-000000000006', 'cccccccc-0000-4000-8000-000000000001', 'supporting')
 on conflict do nothing;
 

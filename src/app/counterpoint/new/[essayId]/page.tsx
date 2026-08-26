@@ -2,9 +2,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { SteelmanField } from "./steelman-field";
 import { startCounterpoint } from "@/lib/actions";
-import { blocksForEssay, essayById } from "@/lib/queries";
+import { blocksForEssay, draftCounterpointOn, essayById } from "@/lib/queries";
 import { currentProfile } from "@/lib/supabase/server";
-import { supabaseServer } from "@/lib/supabase/server";
 
 export const metadata = { title: "Write a counterpoint · Lensa" };
 
@@ -13,10 +12,10 @@ export default async function CounterpointStepOne({
   searchParams,
 }: {
   params: Promise<{ essayId: string }>;
-  searchParams: Promise<{ short?: string }>;
+  searchParams: Promise<{ short?: string; error?: string }>;
 }) {
   const { essayId } = await params;
-  const { short } = await searchParams;
+  const { short, error } = await searchParams;
 
   const profile = await currentProfile();
   if (!profile) redirect("/signin");
@@ -25,17 +24,15 @@ export default async function CounterpointStepOne({
   if (!original || original.status !== "published") notFound();
   if (original.author.id === profile.id) redirect(`/e/${original.slug}`);
 
-  const supabase = await supabaseServer();
-  const { data: existing } = await supabase
-    .from("essays")
-    .select("id, steelman, contests")
-    .eq("author_id", profile.id)
-    .eq("answers_essay_id", essayId)
-    .eq("status", "draft")
-    .maybeSingle();
+  const [existing, blocks] = await Promise.all([
+    draftCounterpointOn(essayId, profile.id),
+    blocksForEssay(original.id),
+  ]);
 
-  const blocks = await blocksForEssay(original.id);
   const paragraphs = blocks.filter((block) => block.kind === "paragraph");
+  if (paragraphs.length === 0) notFound();
+
+  const target = existing?.target_block_id ?? paragraphs[0].id;
 
   return (
     <main className="column">
@@ -52,50 +49,46 @@ export default async function CounterpointStepOne({
       </div>
 
       <form action={startCounterpoint.bind(null, essayId)}>
+        {/* A counterpoint answers a paragraph. There is no option to answer the
+            essay as a whole: that is the change the argument turns on. */}
         <div className="mb-8">
-          <span className="label">What you are contesting</span>
+          <span className="label">The paragraph you are contesting</span>
           <div className="flex flex-wrap gap-2">
-            <label className="cursor-pointer">
-              <input
-                type="radio"
-                name="contests"
-                value="thesis"
-                defaultChecked={!existing?.contests || existing.contests === "thesis"}
-                className="peer sr-only"
-              />
-              <span className="chip peer-checked:border-[color:var(--ink2)] peer-checked:bg-[color:var(--raised)] peer-checked:text-[color:var(--ink)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[color:var(--focus)]">
-                The thesis
-              </span>
-            </label>
-            {paragraphs.map((_, i) => {
-              const value = `paragraph ${i + 1}`;
-              return (
-                <label key={value} className="cursor-pointer">
-                  <input
-                    type="radio"
-                    name="contests"
-                    value={value}
-                    defaultChecked={existing?.contests === value}
-                    className="peer sr-only"
-                  />
-                  <span className="chip peer-checked:border-[color:var(--ink2)] peer-checked:bg-[color:var(--raised)] peer-checked:text-[color:var(--ink)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[color:var(--focus)]">
-                    Paragraph {i + 1}
-                  </span>
-                </label>
-              );
-            })}
+            {paragraphs.map((block, i) => (
+              <label key={block.id} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="target_block_id"
+                  value={block.id}
+                  defaultChecked={block.id === target}
+                  className="peer sr-only"
+                />
+                <span className="chip peer-checked:border-[color:var(--ink2)] peer-checked:bg-[color:var(--raised)] peer-checked:text-[color:var(--ink)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[color:var(--focus)]">
+                  Paragraph {i + 1}
+                </span>
+              </label>
+            ))}
           </div>
         </div>
 
         {short && (
           <div className="accent-bar mb-6">
             <p className="note-lg m-0 text-[color:var(--ink2)]">
-              Say more. A summary the other writer would accept takes at least a sentence of real content.
+              Say more. Both answers need at least a sentence of real content — a summary the other writer
+              would accept, and the strongest case for it.
             </p>
           </div>
         )}
 
-        <SteelmanField defaultValue={existing?.steelman ?? ""} />
+        {error && (
+          <div className="accent-bar mb-6">
+            <p className="note-lg m-0 text-[color:var(--ink2)]">
+              That paragraph is not part of the essay you are answering. Pick one above and try again.
+            </p>
+          </div>
+        )}
+
+        <SteelmanField claim={existing?.claim ?? ""} strongest={existing?.strongest ?? ""} />
       </form>
 
       <p className="note-lg rule-t mt-12 pt-6">

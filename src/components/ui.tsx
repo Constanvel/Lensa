@@ -7,7 +7,7 @@ import { SPOILER_LABEL, effectiveClaimKind, isUnsourced, type Block, type Essay 
 
 export { ClaimBadge };
 
-export function BlockBadge({ block }: { block: Pick<Block, "claim_kind" | "citation"> }) {
+export function BlockBadge({ block }: { block: Pick<Block, "claim_kind" | "citations"> }) {
   return <ClaimBadge kind={effectiveClaimKind(block)} demoted={isUnsourced(block)} />;
 }
 

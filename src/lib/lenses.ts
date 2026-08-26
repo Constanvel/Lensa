@@ -1,6 +1,11 @@
 /**
  * The taxonomy is closed. It grows only when a lens is proposed with essays
  * already written under it — never because a lens sounds like it should exist.
+ *
+ * The keys are the `lens` enum, which is what actually closes the set. The
+ * copy here is the UI's, read synchronously wherever a chip is drawn; the
+ * `lenses` table holds the database's own copy for anything reading SQL
+ * directly. Adding or renaming a lens changes both, in one migration.
  */
 export const LENSES = {
   nietzschean: {

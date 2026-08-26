@@ -16,20 +16,34 @@ cp .env.example .env.local   # isi URL dan anon key dari Supabase
 npm run dev
 ```
 
-Skema dan data contoh dijalankan sekali terhadap project Supabase yang kosong:
+Migrasi dijalankan berurutan sesuai nama file, sekali saja, terhadap project
+Supabase yang kosong:
 
 ```bash
-psql "$DATABASE_URL" -f supabase/schema.sql
+for f in supabase/migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
 ```
 
 ```bash
 psql "$DATABASE_URL" -f supabase/seed.sql
 ```
 
-`schema.sql` memasang tabel, RLS, dan trigger yang membuat baris `profiles`
-begitu ada user baru di `auth.users`. `seed.sql` mengisi tiga penulis, empat
-karakter, satu esai lengkap dengan sitasi dan spoiler gate, dua counterpoint yang
-sudah lewat steelman gate, plus ledger klaimnya.
+Tiap migrasi dibungkus transaksi, jadi kegagalan di tengah tidak meninggalkan
+skema separuh jadi. `0001_init` memasang tabel, RLS, dan trigger yang membuat
+baris `profiles` begitu ada user baru di `auth.users`. `0002_claims` memindahkan
+klaim ke tempatnya: sitasi menunjuk satu chapter dan boleh lebih dari satu per
+blok, counterpoint menjawab satu paragraf lewat tabelnya sendiri dengan dua
+jawaban steelman, contest adalah satu pembaca menandai satu blok, dan taksonomi
+lensa jadi tabel yang bisa dibaca.
+
+`seed.sql` mengisi tiga penulis, empat karakter, enam esai terbit dengan campuran
+tipe klaim, dua di antaranya counterpoint yang sudah lewat steelman gate, plus
+blok yang dikontes, blok Textual tanpa sitasi, posisi baca, dan ledger klaimnya.
+
+Tipe TypeScript dibangkitkan dari skema. Setelah mengubah migrasi:
+
+```bash
+npx supabase gen types typescript --project-id "$PROJECT_REF" > src/lib/database.types.ts
+```
 
 Di Supabase dashboard, Authentication → Providers, nyalakan **Email** (magic
 link). Google opsional — tombolnya sudah ada di `/signin`.
@@ -38,8 +52,9 @@ link). Google opsional — tombolnya sudah ada di `/signin`.
 npm test
 ```
 
-Delapan assertion terhadap aturan yang tidak boleh salah: tesis satu kalimat,
-deskripsi karakter dua kalimat, dan demosi klaim Textual yang belum bersumber.
+Sepuluh assertion terhadap aturan yang tidak boleh salah: tesis satu kalimat,
+deskripsi karakter dua kalimat, demosi klaim Textual yang belum bersumber, dan
+penomoran paragraf yang melewati heading.
 
 ## Peta rute
 

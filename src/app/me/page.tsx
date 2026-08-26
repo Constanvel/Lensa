@@ -72,7 +72,7 @@ export default async function MyWorkPage() {
                     {draft.character.name} · {draft.character.work.title}
                   </span>
                   <span>Edited {when(draft.updated_at)}</span>
-                  {draft.answers_essay_id && <span className="meta-accent">Counterpoint</span>}
+                  {draft.counterpoint && <span className="meta-accent">Counterpoint</span>}
                 </div>
               </Link>
             </article>
@@ -127,19 +127,22 @@ export default async function MyWorkPage() {
           <div key={counterpoint.id} className="rule-t py-6">
             <div className="meta meta-accent mb-[10px]">Steelman awaiting your mark</div>
             <p className="serif-md m-0 mb-2 max-w-[640px] [text-wrap:pretty]">
-              {counterpoint.author.display_name} summarised your argument in order to answer it. You decide
-              whether the summary is fair.
+              {counterpoint.author.display_name} summarised paragraph {counterpoint.targetParagraph} in
+              order to answer it. You decide whether the summary is fair.
+            </p>
+            <p className="note-lg quiet-bar m-0 mb-2 max-w-[640px] text-[color:var(--ink2)]">
+              {counterpoint.counterpoint.claim}
             </p>
             <p className="note-lg quiet-bar m-0 mb-4 max-w-[640px] text-[color:var(--ink2)]">
-              {counterpoint.steelman}
+              At its strongest · {counterpoint.counterpoint.strongest}
             </p>
             <div className="flex flex-wrap gap-5">
-              <form action={markSteelman.bind(null, counterpoint.id, "fair")}>
+              <form action={markSteelman.bind(null, counterpoint.counterpoint.id, "fair")}>
                 <button type="submit" className="text-btn text-btn-strong">
                   Mark fair
                 </button>
               </form>
-              <form action={markSteelman.bind(null, counterpoint.id, "disputed")}>
+              <form action={markSteelman.bind(null, counterpoint.counterpoint.id, "disputed")}>
                 <button type="submit" className="text-btn text-btn-accent">
                   Dispute it
                 </button>
@@ -161,8 +164,10 @@ export default async function MyWorkPage() {
                 <span className="meta-strong">
                   {counterpoint.title} · {counterpoint.author.display_name}
                 </span>
-                {counterpoint.steelman_mark === "fair" && <span className="meta-moss">Marked fair</span>}
-                {counterpoint.steelman_mark === "disputed" && (
+                {counterpoint.counterpoint.mark === "fair" && (
+                  <span className="meta-moss">Marked fair</span>
+                )}
+                {counterpoint.counterpoint.mark === "disputed" && (
                   <span className="meta-accent">Disputed</span>
                 )}
               </div>

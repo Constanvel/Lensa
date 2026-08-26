@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
+import { SiteFooter } from "@/components/site-footer";
 import { currentProfile } from "@/lib/supabase/server";
 import { readingProgress } from "@/lib/queries";
 
@@ -49,6 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           collapsed={collapsed}
           viewer={profile ? { handle: profile.handle, display_name: profile.display_name } : null}
           progress={progress}
+          footer={<SiteFooter />}
         >
           {children}
         </AppShell>

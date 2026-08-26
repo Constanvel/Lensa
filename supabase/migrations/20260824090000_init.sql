@@ -1,6 +1,13 @@
--- Lensa schema. Run against a fresh Supabase project:
---   psql "$DATABASE_URL" -f supabase/schema.sql
+-- 0001 · the shape Lensa shipped with.
+--   psql "$DATABASE_URL" -f supabase/migrations/20260824090000_init.sql
 -- Auth is magic link only; auth.users is Supabase's.
+--
+-- Migrations run once, in filename order. This one is wrapped in a transaction
+-- and its objects are guarded, so a failure leaves nothing behind to clean up.
+
+set client_encoding = 'UTF8';
+
+begin;
 
 create extension if not exists pgcrypto;
 
@@ -233,17 +240,25 @@ alter table reading_progress enable row level security;
 alter table revisions        enable row level security;
 
 -- Reading needs no account.
-create policy "profiles are public"   on profiles   for select using (true);
-create policy "works are public"      on works      for select using (true);
+drop policy if exists "profiles are public" on profiles;
+create policy "profiles are public" on profiles   for select using (true);
+drop policy if exists "works are public" on works;
+create policy "works are public" on works      for select using (true);
+drop policy if exists "characters are public" on characters;
 create policy "characters are public" on characters for select using (true);
-create policy "claims are public"     on claims     for select using (true);
-create policy "claim links public"    on claim_links for select using (true);
-create policy "revisions are public"  on revisions  for select using (true);
+drop policy if exists "claims are public" on claims;
+create policy "claims are public" on claims     for select using (true);
+drop policy if exists "claim links public" on claim_links;
+create policy "claim links public" on claim_links for select using (true);
+drop policy if exists "revisions are public" on revisions;
+create policy "revisions are public" on revisions  for select using (true);
 
 -- Drafts stay private.
+drop policy if exists "published essays are public" on essays;
 create policy "published essays are public" on essays for select
   using (status = 'published' or author_id = (select auth.uid()));
 
+drop policy if exists "blocks follow their essay" on blocks;
 create policy "blocks follow their essay" on blocks for select
   using (exists (
     select 1 from essays e
@@ -251,6 +266,7 @@ create policy "blocks follow their essay" on blocks for select
       and (e.status = 'published' or e.author_id = (select auth.uid()))
   ));
 
+drop policy if exists "citations follow their block" on citations;
 create policy "citations follow their block" on citations for select
   using (exists (
     select 1 from blocks b join essays e on e.id = b.essay_id
@@ -259,22 +275,28 @@ create policy "citations follow their block" on citations for select
   ));
 
 -- Writing does.
+drop policy if exists "own profile" on profiles;
 create policy "own profile" on profiles for update
   using (id = (select auth.uid())) with check (id = (select auth.uid()));
 
+drop policy if exists "signed in may add works" on works;
 create policy "signed in may add works" on works for insert
   to authenticated with check (created_by = (select auth.uid()));
 
+drop policy if exists "signed in may add characters" on characters;
 create policy "signed in may add characters" on characters for insert
   to authenticated with check (created_by = (select auth.uid()));
 
+drop policy if exists "own essays" on essays;
 create policy "own essays" on essays for all
   using (author_id = (select auth.uid())) with check (author_id = (select auth.uid()));
 
+drop policy if exists "own blocks" on blocks;
 create policy "own blocks" on blocks for all
   using (exists (select 1 from essays e where e.id = blocks.essay_id and e.author_id = (select auth.uid())))
   with check (exists (select 1 from essays e where e.id = blocks.essay_id and e.author_id = (select auth.uid())));
 
+drop policy if exists "own citations" on citations;
 create policy "own citations" on citations for all
   using (exists (
     select 1 from blocks b join essays e on e.id = b.essay_id
@@ -285,13 +307,17 @@ create policy "own citations" on citations for all
     where b.id = citations.block_id and e.author_id = (select auth.uid())
   ));
 
+drop policy if exists "own reading position" on reading_progress;
 create policy "own reading position" on reading_progress for all
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 
 -- The author of the answered essay marks the steelman fair or disputed.
+drop policy if exists "answered author marks steelman" on essays;
 create policy "answered author marks steelman" on essays for update
   using (exists (
     select 1 from essays original
     where original.id = essays.answers_essay_id
       and original.author_id = (select auth.uid())
   ));
+
+commit;

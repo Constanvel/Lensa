@@ -21,6 +21,24 @@ export const SPOILER_LABEL: Record<SpoilerLevel, string> = {
 
 export type Medium = "novel" | "manga" | "anime" | "film" | "series" | "game";
 
+/** The form posts a string; the column is an enum. Anything unrecognised is none. */
+export function asSpoilerLevel(value: string): SpoilerLevel {
+  return value in SPOILER_LABEL ? (value as SpoilerLevel) : "none";
+}
+
+/**
+ * Works count in chapters, episodes or parts. Everything downstream — a
+ * citation's chapter, a block's covered range, a reader's position — is the
+ * same integer, and only the noun changes.
+ */
+export function unitNoun(unitLabel: string): string {
+  return unitLabel === "episodes" ? "episode" : unitLabel === "parts" ? "part" : "chapter";
+}
+
+export function unitShort(unitLabel: string): string {
+  return unitLabel === "episodes" ? "ep." : unitLabel === "parts" ? "pt." : "ch.";
+}
+
 export const MEDIUM_LABEL: Record<Medium, string> = {
   novel: "Novel",
   manga: "Manga",
@@ -29,6 +47,11 @@ export const MEDIUM_LABEL: Record<Medium, string> = {
   series: "Series",
   game: "Game",
 };
+
+/** The form posts a string; the column is an enum. Anything else is a novel. */
+export function asMedium(value: string): Medium {
+  return value in MEDIUM_LABEL ? (value as Medium) : "novel";
+}
 
 export type Profile = {
   id: string;
@@ -74,25 +97,50 @@ export type Essay = {
   reading_minutes: number | null;
   published_at: string | null;
   updated_at: string;
-  /** Set when this essay is a counterpoint to another. */
-  answers_essay_id: string | null;
-  /** What the counterpoint contests: "thesis", or "paragraph 4". */
-  contests: string | null;
-  /** The opposing argument stated in the counterpoint author's own words. */
-  steelman: string | null;
-  /** The original author's verdict on that summary. */
-  steelman_mark: "fair" | "disputed" | null;
+  /** Set when this essay is a counterpoint. It answers one paragraph, not the essay. */
+  counterpoint: Counterpoint | null;
   author: Pick<Profile, "id" | "handle" | "display_name">;
-  character: Pick<Character, "id" | "slug" | "name"> & { work: Pick<Work, "slug" | "title"> };
+  character: Pick<Character, "id" | "slug" | "name"> & {
+    work: Pick<Work, "id" | "slug" | "title" | "unit_label">;
+  };
 };
 
+/**
+ * The steelman gate, as a row. Both answers are written before the rebuttal
+ * exists, and the row cannot be stored without them — so there is no such
+ * thing as a counterpoint that skipped the gate.
+ */
+export type Counterpoint = {
+  id: string;
+  essay_id: string;
+  /** The paragraph being answered. */
+  target_block_id: string;
+  /** One: what that paragraph claims, in the answerer's own words. */
+  claim: string;
+  /** Two: the strongest case for that claim, not the weakest. */
+  strongest: string;
+  /** The answered author's verdict, published alongside the counterpoint. */
+  mark: "fair" | "disputed" | null;
+};
+
+/** An essay that answers a paragraph, with the position of the paragraph resolved. */
+export type CounterpointEssay = Essay & { counterpoint: Counterpoint; targetParagraph: number };
+
+export const STEELMAN_MIN = 20;
+export const STEELMAN_MAX = 320;
+
+/** A citation points at a chapter. The quote is optional. */
 export type Citation = {
   id: string;
   block_id: string;
-  work_title: string;
-  locator: string;
-  quote: string;
+  chapter: number;
+  quote: string | null;
+  work: Pick<Work, "slug" | "title" | "unit_label">;
 };
+
+export function citationLabel(citation: Citation): string {
+  return `${unitShort(citation.work.unit_label)} ${citation.chapter}`;
+}
 
 export type Block = {
   id: string;
@@ -107,7 +155,9 @@ export type Block = {
   covers_to: number | null;
   /** The counterpoint that prompted this paragraph's rewrite. */
   revised_after_essay_id: string | null;
-  citation: Citation | null;
+  citations: Citation[];
+  /** One row per reader who marked this paragraph disputed. */
+  contests: { user_id: string }[];
 };
 
 export type Claim = {
@@ -136,12 +186,36 @@ export type ReadingProgress = {
  * An unsourced Textual claim is shown demoted to Interpretive with a dashed
  * underline. The stored claim_kind is untouched — sourcing it restores it.
  */
-export function effectiveClaimKind(block: Pick<Block, "claim_kind" | "citation">): ClaimKind {
-  return block.claim_kind === "textual" && !block.citation ? "interpretive" : block.claim_kind;
+export function effectiveClaimKind(block: Pick<Block, "claim_kind" | "citations">): ClaimKind {
+  return isUnsourced(block) ? "interpretive" : block.claim_kind;
 }
 
-export function isUnsourced(block: Pick<Block, "claim_kind" | "citation">): boolean {
-  return block.claim_kind === "textual" && !block.citation;
+export function isUnsourced(block: Pick<Block, "claim_kind" | "citations">): boolean {
+  return block.claim_kind === "textual" && (block.citations?.length ?? 0) === 0;
+}
+
+/**
+ * Readers count paragraphs, not blocks: a heading takes no number of its own.
+ * Counts restart per essay, so a block's position and the number a reader
+ * would give it are not the same thing.
+ */
+export function numberParagraphs<
+  T extends { id: string; position: number; kind: string; essay_id: string },
+>(blocks: T[]): { id: string; paragraph: number }[] {
+  const counted = new Map<string, number>();
+  return [...blocks]
+    .sort((a, b) => a.position - b.position)
+    .map((block) => {
+      const soFar = counted.get(block.essay_id) ?? 0;
+      const paragraph = block.kind === "paragraph" ? soFar + 1 : soFar;
+      if (block.kind === "paragraph") counted.set(block.essay_id, paragraph);
+      return { id: block.id, paragraph };
+    });
+}
+
+/** A contested paragraph is one at least one reader has marked disputed. */
+export function isContested(block: Pick<Block, "contests">): boolean {
+  return (block.contests?.length ?? 0) > 0;
 }
 
 /** A thesis is one sentence. A second is refused, not truncated. */

@@ -6,6 +6,7 @@ import {
   countWords,
   effectiveClaimKind,
   isUnsourced,
+  numberParagraphs,
   oneSentence,
   readingMinutes,
   THESIS_MAX,
@@ -13,7 +14,7 @@ import {
 
 // Run with: npm test
 
-const cited = { work_title: "Berserk", locator: "ch. 093", quote: "…" } as never;
+const cited = [{ chapter: 93, quote: "…" }] as never;
 
 test("a second sentence is refused, not truncated", () => {
   assert.equal(
@@ -54,19 +55,35 @@ test("an empty textarea counts zero words, not one", () => {
 });
 
 test("an unsourced Textual claim reads as Interpretive", () => {
-  assert.equal(effectiveClaimKind({ claim_kind: "textual", citation: null }), "interpretive");
-  assert.ok(isUnsourced({ claim_kind: "textual", citation: null }));
+  assert.equal(effectiveClaimKind({ claim_kind: "textual", citations: [] }), "interpretive");
+  assert.ok(isUnsourced({ claim_kind: "textual", citations: [] }));
 });
 
 test("a sourced Textual claim keeps its badge", () => {
-  assert.equal(effectiveClaimKind({ claim_kind: "textual", citation: cited }), "textual");
-  assert.ok(!isUnsourced({ claim_kind: "textual", citation: cited }));
+  assert.equal(effectiveClaimKind({ claim_kind: "textual", citations: cited }), "textual");
+  assert.ok(!isUnsourced({ claim_kind: "textual", citations: cited }));
 });
 
 test("Interpretive and Speculative are never demoted for want of a source", () => {
-  assert.equal(effectiveClaimKind({ claim_kind: "interpretive", citation: null }), "interpretive");
-  assert.equal(effectiveClaimKind({ claim_kind: "speculative", citation: null }), "speculative");
-  assert.ok(!isUnsourced({ claim_kind: "speculative", citation: null }));
+  assert.equal(effectiveClaimKind({ claim_kind: "interpretive", citations: [] }), "interpretive");
+  assert.equal(effectiveClaimKind({ claim_kind: "speculative", citations: [] }), "speculative");
+  assert.ok(!isUnsourced({ claim_kind: "speculative", citations: [] }));
+});
+
+test("paragraph numbers skip headings and restart per essay", () => {
+  const numbered = numberParagraphs([
+    { id: "a", position: 0, kind: "paragraph", essay_id: "e1" },
+    { id: "h", position: 1, kind: "heading", essay_id: "e1" },
+    { id: "b", position: 2, kind: "paragraph", essay_id: "e1" },
+    { id: "c", position: 0, kind: "paragraph", essay_id: "e2" },
+  ]);
+  const by = Object.fromEntries(numbered.map((n) => [n.id, n.paragraph]));
+
+  assert.equal(by.a, 1);
+  // The heading sits between them and takes no number of its own.
+  assert.equal(by.b, 2);
+  // The next essay starts again at one.
+  assert.equal(by.c, 1);
 });
 
 test("reading time never rounds to zero", () => {

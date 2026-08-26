@@ -204,6 +204,8 @@
   .meta-strong { color: var(--ink2); }
   .meta-accent { color: var(--accent); }
   .meta-moss { color: var(--moss); }
+  .meta-ochre { color: var(--ochre); }
+  .meta-violet { color: var(--violet); }
   .meta-ink { color: var(--ink); }
   .meta-row {
     display: flex;
@@ -815,6 +817,184 @@
     pointer-events: none;
   }
   .gate > * { pointer-events: auto; }
+
+  /* ── application shell ───────────────────────────────── */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    padding: 6px 16px;
+  }
+  @media (min-width: 1024px) {
+    .topbar { padding: 6px 48px; }
+  }
+
+  .wordmark {
+    flex: none;
+    font: 400 24px/1 var(--font-serif);
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  /* Secondary chrome steps out of the way while search is focused. */
+  .chrome-item {
+    flex: none;
+    max-width: 240px;
+    overflow: hidden;
+    transition:
+      opacity 160ms linear,
+      max-width 160ms cubic-bezier(0.2, 0.6, 0.2, 1),
+      margin 160ms linear;
+  }
+  .topbar[data-search="open"] .chrome-item {
+    opacity: 0;
+    max-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+    pointer-events: none;
+  }
+
+  .search-slot {
+    flex: 0 0 260px;
+    margin-left: auto;
+    transition:
+      flex-basis 160ms cubic-bezier(0.2, 0.6, 0.2, 1),
+      flex-grow 160ms cubic-bezier(0.2, 0.6, 0.2, 1);
+  }
+  /* The auto margin has to go: in flexbox an auto margin eats the free space
+     before flex-grow can distribute it, so the field would never fill. */
+  .topbar[data-search="open"] .search-slot { flex: 1 1 auto; margin-left: 0; }
+  @media (max-width: 1023.98px) {
+    .search-slot { flex: 1 1 auto; }
+  }
+
+  /* Inside the reader the bar carries the thesis and the claim tally, and the
+     shell's own bar stands down — but only where a reader bar really exists. */
+  .shell-main:has(.reader-thesis) > .topbar { display: none; }
+
+  .reader-thesis {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 400 15px/1.4 var(--font-serif);
+    color: var(--ink);
+  }
+  .reader-counts {
+    flex: none;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+
+  .menu-btn {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-left: -10px;
+    border: 0;
+    background: none;
+    color: var(--ink2);
+  }
+  .menu-btn:hover { color: var(--ink); }
+  @media (min-width: 1024px) {
+    .menu-btn { display: none; }
+  }
+
+  /* Below 1024 the rail is gone and this is the whole navigation. */
+  .drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    padding: 6px 24px 24px;
+  }
+  .drawer-nav {
+    display: flex;
+    flex-direction: column;
+    margin-top: 24px;
+  }
+  .drawer-item {
+    display: block;
+    padding: 10px 0;
+    font: 400 31px/1.25 var(--font-serif);
+    letter-spacing: -0.01em;
+    color: var(--ink2);
+    text-align: left;
+    background: none;
+    border: 0;
+    border-bottom: 0;
+  }
+  .drawer-item[data-on="true"] { color: var(--ink); }
+  .drawer-item:hover { color: var(--ink); }
+  .drawer-group {
+    font: 500 12px/1.4 var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    padding: 24px 0 8px;
+  }
+  .drawer-foot {
+    margin-top: auto;
+    border-top: 1px solid var(--rule);
+    padding-top: 20px;
+  }
+
+  /* ── footer ───────────────────────────────────────────── */
+  /* Inter 13px muted throughout. No accent, no Literata, no exceptions. */
+  .site-footer {
+    border-top: 1px solid var(--rule);
+    padding: 40px 24px 56px;
+    font: 400 13px/1.7 var(--font-sans);
+    color: var(--muted);
+  }
+  @media (min-width: 1024px) {
+    .site-footer { padding: 40px 48px 56px; }
+  }
+  .site-footer a,
+  .site-footer p,
+  .site-footer li,
+  .site-footer h2 {
+    font: 400 13px/1.7 var(--font-sans);
+    color: var(--muted);
+    margin: 0;
+  }
+  .site-footer a {
+    border-bottom: 0;
+    text-decoration: none;
+  }
+  .site-footer a:hover { color: var(--ink); border-bottom: 0; }
+  .footer-cols {
+    max-width: var(--page);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  @media (min-width: 640px) {
+    .footer-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  /* Heads differ from their column by weight alone — same size, same colour.
+     Needs the .site-footer prefix to outrank the `.site-footer h2` reset above. */
+  .site-footer .footer-head {
+    font: 500 13px/1.7 var(--font-sans);
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
 
   /* ── loading is a static state ────────────────────────── */
   /* Opacity drop plus a small caps label. No spinner, no shimmer. */

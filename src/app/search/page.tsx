@@ -7,6 +7,30 @@ import { search } from "@/lib/queries";
 
 export const metadata = { title: "Search · Lensa" };
 
+/**
+ * The field is a plain GET form, so search works with JavaScript off and every
+ * result page is a URL. `autoFocus` is the focused state: arriving at /search
+ * with nothing typed puts the caret in the field with the --focus ring on it.
+ */
+function SearchField({ term, autoFocus = false }: { term: string; autoFocus?: boolean }) {
+  return (
+    <form action="/search" method="get" role="search" className="pb-12">
+      <label className="label" htmlFor="q">
+        Search
+      </label>
+      <input
+        id="q"
+        name="q"
+        type="search"
+        defaultValue={term}
+        autoFocus={autoFocus}
+        placeholder="Characters, works, essays, writers"
+        className="search w-full max-w-[560px]"
+      />
+    </form>
+  );
+}
+
 export default async function SearchPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams;
   const term = (q ?? "").trim();
@@ -14,7 +38,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   if (!term) {
     return (
       <main className="page">
-        <div className="meta pb-12">Search characters, works, essays, writers</div>
+        <SearchField term="" autoFocus />
         <p className="lead measure m-0">
           Essay results lead with the thesis, so scanning results means scanning arguments.
         </p>
@@ -28,7 +52,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   if (total === 0) {
     return (
       <main className="page">
-        <div className="pt-14">
+        <SearchField term={term} />
+        <div className="rule-t pt-14">
           <EmptyState
             headline={`Nothing matches “${term}”.`}
             body="No character, work, essay, or writer under that name. If the character exists and Lensa does not have them yet, you can be the one who adds them."
@@ -48,7 +73,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
 
   return (
     <main className="page">
-      <div className="meta pb-12">
+      <SearchField term={term} />
+      <div className="meta rule-t pt-6 pb-12">
         {total} result{total === 1 ? "" : "s"} for “{term}”
       </div>
 

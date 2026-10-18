@@ -19,7 +19,7 @@ export default async function ClaimLedgerPage({
   if (!character) notFound();
 
   const claims = await claimsForCharacter(character.id, sort);
-  const contested = claims.filter((claim) => claim.contesting > 0).slice(0, 3);
+  const contested = claims.filter((claim) => claim.contesting > 0);
   const visible = filter ? claims.filter((claim) => claim.id === filter) : claims;
 
   const base = `/c/${slug}/claims`;
@@ -57,7 +57,7 @@ export default async function ClaimLedgerPage({
           {contested.length > 0 && (
             <section className="rule-t pt-8 pb-10">
               <div className="mb-7 flex flex-wrap items-baseline gap-x-5 gap-y-2">
-                <h2 className="meta m-0">Contested claims</h2>
+                <h2 className="meta m-0">Contested claims · {contested.length}</h2>
                 <span className="meta meta-wrap">Supporting essays in moss, contesting in oxblood</span>
                 {filter && (
                   <Link href={href({ claim: undefined })} className="text-btn plain">
@@ -74,6 +74,7 @@ export default async function ClaimLedgerPage({
                     <Link
                       key={claim.id}
                       href={href({ claim: filter === claim.id ? undefined : claim.id })}
+                      aria-pressed={filter === claim.id}
                       className={`plain block w-full pb-5 text-left transition-opacity duration-100 ${
                         dimmed ? "opacity-40" : "opacity-100"
                       }`}

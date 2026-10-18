@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CitationDrawer } from "@/components/citation-drawer";
 import { EssayBody } from "@/components/essay-body";
 import { ReaderTopBar } from "@/components/reader-top-bar";
 import { essayMeta } from "@/components/ui";
-import { CLAIM_KINDS, effectiveClaimKind, type ClaimKind } from "@/lib/types";
+import { CLAIM_KINDS, effectiveClaimKind, numberParagraphs, type ClaimKind } from "@/lib/types";
 import {
   blocksForEssay,
   counterpointsFor,
@@ -21,8 +22,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: essay?.title ? `${essay.title} · Lensa` : "Lensa" };
 }
 
-export default async function ReaderPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ReaderPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ cite?: string }>;
+}) {
   const { slug } = await params;
+  const { cite } = await searchParams;
+
   const essay = await essayBySlug(slug);
   if (!essay || essay.status !== "published") notFound();
 
@@ -51,8 +60,19 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
     if (block.kind === "paragraph") counts[effectiveClaimKind(block)] += 1;
   }
 
+  // The citation marks are one continuous run down the essay, so a mark's
+  // number is its place in that run rather than its place in its paragraph.
+  const marks = blocks.flatMap((block) =>
+    (block.citations ?? []).map((citation) => ({ citation, blockId: block.id })),
+  );
+  const openAt = cite ? marks.findIndex((mark) => mark.citation.id === cite) : -1;
+  const open = openAt >= 0 ? marks[openAt] : null;
+  const paragraphOf = new Map(numberParagraphs(blocks).map((b) => [b.id, b.paragraph]));
+
   return (
-    <>
+    // From 1280 the frame gives the open drawer its own room; below that the
+    // drawer is an overlay and the essay does not move.
+    <div className="reader-frame" data-cite={open ? "open" : undefined}>
       <ReaderTopBar thesis={essay.thesis ?? ""} counts={counts} />
 
       <main className="pb-24">
@@ -132,6 +152,7 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
         blocks={blocks}
         position={here?.position ?? null}
         unitLabel={here?.work.unit_label ?? "chapters"}
+        openCitation={open?.citation.id}
       />
 
       <div className="mx-auto mt-12 max-w-[824px] px-6 md:mt-16">
@@ -164,6 +185,15 @@ export default async function ReaderPage({ params }: { params: Promise<{ slug: s
         ))}
       </div>
       </main>
-    </>
+
+      {open && (
+        <CitationDrawer
+          citation={open.citation}
+          index={openAt + 1}
+          paragraph={paragraphOf.get(open.blockId) ?? 1}
+          closeHref={`/e/${slug}`}
+        />
+      )}
+    </div>
   );
 }
